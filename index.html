@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Text to Flow</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --border: #d9dde3;
+    --text: #1d2330;
+    --muted: #667085;
+    --accent: #2f6fed;
+    --accent-text: #ffffff;
+    --error: #c62828;
+    --ok: #2e7d32;
+    --editor-bg: #fbfcfd;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #13161c;
+      --panel: #1b1f27;
+      --border: #2d333e;
+      --text: #e4e7ec;
+      --muted: #98a2b3;
+      --accent: #5b8cff;
+      --accent-text: #0b0e14;
+      --error: #ff6b6b;
+      --ok: #6fcf75;
+      --editor-bg: #161a21;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+  }
+  header h1 { font-size: 16px; margin: 0; margin-right: auto; }
+  header label { display: flex; align-items: center; gap: 6px; color: var(--muted); }
+  select, button {
+    font: inherit;
+    color: var(--text);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 12px;
+    cursor: pointer;
+  }
+  button.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-text);
+    font-weight: 600;
+  }
+  button:focus-visible, select:focus-visible, textarea:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  main {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(280px, 2fr) 3fr;
+  }
+  .editor-pane {
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border);
+    min-height: 0;
+  }
+  textarea {
+    flex: 1;
+    min-height: 200px;
+    resize: none;
+    border: 0;
+    padding: 16px;
+    background: var(--editor-bg);
+    color: var(--text);
+    font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    tab-size: 2;
+  }
+  .status {
+    padding: 8px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--muted);
+    font-size: 12px;
+    min-height: 34px;
+  }
+  .status.error { color: var(--error); }
+  .status.ok { color: var(--ok); }
+  details.help {
+    padding: 8px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--panel);
+    font-size: 12px;
+    color: var(--muted);
+  }
+  details.help summary { cursor: pointer; color: var(--text); }
+  details.help code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color: var(--text);
+  }
+  details.help ul { margin: 6px 0 0; padding-left: 18px; }
+  .diagram-pane {
+    overflow: auto;
+    padding: 24px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    min-height: 0;
+  }
+  #diagram { width: 100%; text-align: center; }
+  #diagram svg { max-width: 100%; height: auto; }
+  #diagram.stale { opacity: 0.45; transition: opacity 0.15s; }
+  .empty { color: var(--muted); margin-top: 48px; }
+  @media (max-width: 760px) {
+    main { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+    .editor-pane { border-right: 0; border-bottom: 1px solid var(--border); }
+    textarea { min-height: 220px; }
+    .diagram-pane { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Text → Flow Diagram</h1>
+  <label>Diagram
+    <select id="mode">
+      <option value="flow">Flowchart</option>
+      <option value="c4">C4 model</option>
+    </select>
+  </label>
+  <label>Direction
+    <select id="direction">
+      <option value="TD">Top → Down</option>
+      <option value="LR">Left → Right</option>
+    </select>
+  </label>
+  <button id="download" type="button">Download SVG</button>
+  <button id="submit" class="primary" type="button" title="Ctrl/Cmd + Enter">Submit</button>
+</header>
+<main>
+  <section class="editor-pane">
+    <textarea id="input" spellcheck="false" aria-label="Diagram description"></textarea>
+    <div id="status" class="status" role="status" aria-live="polite"></div>
+    <details class="help">
+      <summary>Syntax</summary>
+      <ul data-mode="flow">
+        <li><code>A -> B</code> connects two steps; chain them: <code>A -> B -> C</code></li>
+        <li><code>A -yes-> B</code> adds a label to the arrow</li>
+        <li>A step ending in <code>?</code> is drawn as a decision diamond</li>
+        <li><code>Start</code>, <code>End</code>, <code>Begin</code>, <code>Stop</code> are drawn as rounded terminals</li>
+        <li>A line with a single name adds a step on its own</li>
+        <li><code>direction: LR</code> on its own line overrides the direction picker</li>
+        <li>Lines starting with <code>#</code> or <code>//</code> are comments</li>
+      </ul>
+      <ul data-mode="c4" hidden>
+        <li>Declare elements: <code>person</code>, <code>system</code>, <code>external</code>, <code>container</code>, <code>database</code>, <code>component</code></li>
+        <li><code>container Web App [React]: Delivers the UI</code> — name, optional <code>[technology]</code>, optional <code>: description</code></li>
+        <li><code>boundary Name [Software System] {</code> … <code>}</code> groups the elements declared inside it (boundaries can nest)</li>
+        <li><code>A -uses [HTTPS]-> B</code> adds a relationship with optional technology</li>
+        <li>Names used in arrows but never declared are drawn as plain boxes</li>
+        <li><code>direction: LR</code> and <code>#</code> / <code>//</code> comments work as in flowcharts</li>
+      </ul>
+    </details>
+  </section>
+  <section class="diagram-pane">
+    <div id="diagram"><p class="empty">Loading renderer…</p></div>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script>
+(() => {
+  const MODE_KEY = 'text2flow:mode';
+  const DEBOUNCE_MS = 250;
+  const MODES = {
+    flow: {
+      storageKey: 'text2flow:text',
+      file: 'flow-diagram.svg',
+      units: ['step', 'connection'],
+      example: [
+        'Start -> Enter credentials',
+        'Enter credentials -> Valid?',
+        'Valid? -yes-> Dashboard',
+        'Valid? -no-> Show error',
+        'Show error -> Enter credentials',
+        'Dashboard -> End',
+      ].join('\n'),
+    },
+    c4: {
+      storageKey: 'text2flow:c4',
+      file: 'c4-diagram.svg',
+      units: ['element', 'relationship'],
+      example: [
+        '# C4 container diagram: declare elements, then connect them',
+        'person Customer: A bank customer with personal accounts',
+        'external Email System: Sends e-mails to customers',
+        '',
+        'boundary Internet Banking [Software System] {',
+        '  container Web App [React]: Lets customers manage their accounts online',
+        '  container API [Java, Spring Boot]: Provides banking functionality over JSON/HTTPS',
+        '  database Database [PostgreSQL]: Stores accounts and transactions',
+        '}',
+        '',
+        'Customer -uses [HTTPS]-> Web App',
+        'Web App -calls [JSON/HTTPS]-> API',
+        'API -reads and writes [JDBC]-> Database',
+        'API -sends e-mail using [SMTP]-> Email System',
+        'Email System -sends e-mails to-> Customer',
+      ].join('\n'),
+    },
+  };
+  const TERMINALS = new Set(['start', 'end', 'begin', 'stop']);
+  // Matches "->" or " -label->"; the label form needs whitespace before the
+  // dash so hyphenated names like "Re-enter" stay intact.
+  const ARROW = /\s*->\s*|\s+-([^>]*?)->\s*/;
+  const C4_KINDS = {
+    person:    { type: 'Person',          shape: 'rounded',  cls: 'c4person' },
+    system:    { type: 'Software System', shape: 'rect',     cls: 'c4system' },
+    external:  { type: 'External System', shape: 'rect',     cls: 'c4external' },
+    container: { type: 'Container',       shape: 'rect',     cls: 'c4container' },
+    database:  { type: 'Database',        shape: 'cylinder', cls: 'c4container' },
+    component: { type: 'Component',       shape: 'rect',     cls: 'c4component' },
+  };
+  const C4_DECL = /^(person|system|external|container|database|component)\s+(.+?)(?:\s*\[([^\]]*)\])?(?:\s*:\s*(.*))?$/i;
+  const C4_BOUNDARY = /^boundary\s+(.+?)(?:\s*\[([^\]]*)\])?\s*\{$/i;
+  const C4_CLASS_DEFS = [
+    'classDef c4person fill:#08427b,stroke:#052e56,color:#ffffff',
+    'classDef c4system fill:#1168bd,stroke:#0b4884,color:#ffffff',
+    'classDef c4external fill:#8a8a8a,stroke:#6b6b6b,color:#ffffff',
+    'classDef c4container fill:#438dd5,stroke:#2e6295,color:#ffffff',
+    'classDef c4component fill:#85bbf0,stroke:#5d82a8,color:#000000',
+  ];
+
+  const input = document.getElementById('input');
+  const diagram = document.getElementById('diagram');
+  const status = document.getElementById('status');
+  const modeSelect = document.getElementById('mode');
+  const directionSelect = document.getElementById('direction');
+  const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+  let debounceTimer = null;
+  let renderSeq = 0;
+  let hasDiagram = false;
+  let mode = 'flow';
+  const buffers = {};
+
+  function parseDiagram(text, mode, fallbackDirection) {
+    const nodes = new Map();
+    const edges = [];
+    const boundaries = [];
+    const boundaryStack = [];
+    const errors = [];
+    let direction = null;
+
+    const addNode = (label) => {
+      if (!nodes.has(label)) {
+        let shape = 'rect';
+        if (mode === 'flow') {
+          if (label.endsWith('?')) shape = 'decision';
+          else if (TERMINALS.has(label.toLowerCase())) shape = 'terminal';
+        }
+        nodes.set(label, { id: 'n' + nodes.size, shape, kind: null, tech: '', desc: '', boundary: null });
+      }
+      return nodes.get(label);
+    };
+
+    text.split('\n').forEach((raw, i) => {
+      const line = raw.trim();
+      const lineNo = i + 1;
+      if (!line || line.startsWith('#') || line.startsWith('//')) return;
+
+      const dir = line.match(/^direction\s*:\s*(\w+)$/i);
+      if (dir) {
+        const d = dir[1].toUpperCase();
+        if (['TD', 'TB', 'LR', 'RL', 'BT'].includes(d)) direction = d;
+        else errors.push(`Line ${lineNo}: unknown direction "${dir[1]}" (use TD or LR)`);
+        return;
+      }
+
+      // split() with a capture group yields [node, label, node, label, node, ...]
+      const parts = line.split(ARROW);
+
+      if (mode === 'c4' && parts.length === 1) {
+        const open = line.match(C4_BOUNDARY);
+        if (open) {
+          const b = {
+            id: 'b' + boundaries.length,
+            name: open[1].trim(),
+            type: (open[2] || '').trim(),
+            parent: boundaryStack.length ? boundaryStack[boundaryStack.length - 1] : null,
+          };
+          boundaries.push(b);
+          boundaryStack.push(b.id);
+          return;
+        }
+        if (line === '}') {
+          if (!boundaryStack.pop()) errors.push(`Line ${lineNo}: "}" has no matching boundary`);
+          return;
+        }
+        const decl = line.match(C4_DECL);
+        if (decl) {
+          const node = addNode(decl[2].trim());
+          node.kind = decl[1].toLowerCase();
+          node.shape = C4_KINDS[node.kind].shape;
+          node.tech = (decl[3] || '').trim();
+          node.desc = (decl[4] || '').trim();
+          node.boundary = boundaryStack.length ? boundaryStack[boundaryStack.length - 1] : null;
+          return;
+        }
+      }
+
+      const names = [];
+      const labels = [];
+      for (let p = 0; p < parts.length; p++) {
+        if (p % 2 === 0) names.push((parts[p] || '').trim());
+        else labels.push((parts[p] || '').trim());
+      }
+      const missing = names.findIndex((n) => !n);
+      if (missing !== -1) {
+        const where = missing === 0 ? 'before' : 'after';
+        errors.push(`Line ${lineNo}: missing ${mode === 'c4' ? 'element' : 'step'} name ${where} an arrow`);
+        return;
+      }
+      names.forEach(addNode);
+      for (let k = 0; k < labels.length; k++) {
+        edges.push({ from: names[k], to: names[k + 1], label: labels[k] });
+      }
+    });
+
+    return { direction: direction || fallbackDirection, nodes, edges, boundaries, errors };
+  }
+
+  function escapeLabel(s) {
+    return s
+      .replace(/#/g, '#35;')
+      .replace(/"/g, '#quot;')
+      .replace(/`/g, '#96;')
+      .replace(/</g, '#lt;')
+      .replace(/>/g, '#gt;');
+  }
+
+  // Label text for a C4 element: bold name, [Type: tech], description.
+  // Mermaid wraps long lines itself, so the description is passed through whole.
+  function c4NodeLabel(name, node) {
+    let html = `<b>${escapeLabel(name)}</b>`;
+    const kind = C4_KINDS[node.kind];
+    if (kind) {
+      const type = node.tech ? `${kind.type}: ${node.tech}` : kind.type;
+      html += `<br/><small>[${escapeLabel(type)}]</small>`;
+    }
+    if (node.desc) {
+      html += '<br/><br/>' + escapeLabel(node.desc);
+    }
+    return html;
+  }
+
+  function c4EdgeLabel(label) {
+    const m = label.match(/^(.*?)\s*\[([^\]]*)\]\s*$/);
+    const text = m ? m[1] : label;
+    const tech = m ? m[2].trim() : '';
+    const out = text ? [escapeLabel(text)] : [];
+    if (tech) out.push(`<small>[${escapeLabel(tech)}]</small>`);
+    return out.join('<br/>');
+  }
+
+  function nodeLine(id, shape, text) {
+    if (shape === 'decision') return `${id}{"${text}"}`;
+    if (shape === 'terminal') return `${id}(["${text}"])`;
+    if (shape === 'rounded') return `${id}("${text}")`;
+    if (shape === 'cylinder') return `${id}[("${text}")]`;
+    return `${id}["${text}"]`;
+  }
+
+  function toMermaid(graph, mode) {
+    const lines = [`flowchart ${graph.direction}`];
+    const nodeText = (label, node) =>
+      mode === 'c4' ? c4NodeLabel(label, node) : escapeLabel(label);
+
+    // Emit nodes and boundaries belonging to one scope, recursing into nested boundaries.
+    const emitScope = (scopeId, indent) => {
+      for (const [label, node] of graph.nodes) {
+        if (node.boundary === scopeId) lines.push(indent + nodeLine(node.id, node.shape, nodeText(label, node)));
+      }
+      for (const b of graph.boundaries) {
+        if (b.parent !== scopeId) continue;
+        let title = `<b>${escapeLabel(b.name)}</b>`;
+        // Kept on one line: Mermaid sizes subgraph titles for a single line and clips the rest.
+        if (b.type) title += ` <small>[${escapeLabel(b.type)}]</small>`;
+        lines.push(`${indent}subgraph ${b.id}["${title}"]`);
+        emitScope(b.id, indent + '  ');
+        lines.push(`${indent}end`);
+      }
+    };
+    emitScope(null, '  ');
+
+    for (const e of graph.edges) {
+      const from = graph.nodes.get(e.from).id;
+      const to = graph.nodes.get(e.to).id;
+      if (!e.label) {
+        lines.push(`  ${from} --> ${to}`);
+        continue;
+      }
+      const label = mode === 'c4' ? c4EdgeLabel(e.label) : escapeLabel(e.label);
+      lines.push(`  ${from} -->|"${label}"| ${to}`);
+    }
+
+    if (mode === 'c4') {
+      C4_CLASS_DEFS.forEach((def) => lines.push('  ' + def));
+      const byClass = {};
+      for (const node of graph.nodes.values()) {
+        const kind = C4_KINDS[node.kind];
+        if (kind) (byClass[kind.cls] = byClass[kind.cls] || []).push(node.id);
+      }
+      for (const [cls, ids] of Object.entries(byClass)) lines.push(`  class ${ids.join(',')} ${cls}`);
+      for (const b of graph.boundaries) {
+        lines.push(`  style ${b.id} fill:transparent,stroke:#888888,stroke-dasharray:6 4`);
+      }
+      if (graph.edges.length) lines.push('  linkStyle default stroke-dasharray:4 3');
+    }
+    return lines.join('\n');
+  }
+
+  function setStatus(message, kind) {
+    status.textContent = message;
+    status.className = 'status' + (kind ? ' ' + kind : '');
+  }
+
+  function initMermaid() {
+    mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: 'strict',
+      theme: darkQuery.matches ? 'dark' : 'default',
+      flowchart: { curve: 'basis', useMaxWidth: true },
+    });
+  }
+
+  async function render() {
+    clearTimeout(debounceTimer);
+    const seq = ++renderSeq;
+    const graph = parseDiagram(input.value, mode, directionSelect.value);
+
+    if (/^(LR|RL)$/.test(graph.direction)) directionSelect.value = 'LR';
+    else directionSelect.value = 'TD';
+
+    if (graph.errors.length) {
+      diagram.classList.toggle('stale', hasDiagram);
+      setStatus(graph.errors.join(' · '), 'error');
+      return;
+    }
+    if (graph.nodes.size === 0) {
+      const hint = mode === 'c4'
+        ? '<code>person Customer</code> then <code>Customer -uses-&gt; Web App</code>'
+        : '<code>Start -&gt; Do something -&gt; End</code>';
+      diagram.innerHTML = `<p class="empty">Type on the left, e.g. ${hint}</p>`;
+      diagram.classList.remove('stale');
+      hasDiagram = false;
+      setStatus('');
+      return;
+    }
+
+    const id = 'diagram' + seq;
+    try {
+      const { svg } = await mermaid.render(id, toMermaid(graph, mode));
+      if (seq !== renderSeq) return; // a newer render has started
+      diagram.innerHTML = svg;
+      diagram.classList.remove('stale');
+      hasDiagram = true;
+      const [nodeUnit, edgeUnit] = MODES[mode].units;
+      const n = graph.nodes.size, m = graph.edges.length;
+      setStatus(`${n} ${nodeUnit}${n === 1 ? '' : 's'}, ${m} ${edgeUnit}${m === 1 ? '' : 's'}`);
+    } catch (err) {
+      if (seq !== renderSeq) return;
+      diagram.classList.toggle('stale', hasDiagram);
+      setStatus('Could not draw diagram: ' + (err && err.message ? err.message : err), 'error');
+    } finally {
+      // Mermaid can leave its scratch container behind when rendering fails.
+      document.getElementById('d' + id)?.remove();
+    }
+  }
+
+  function scheduleRender() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(render, DEBOUNCE_MS);
+  }
+
+  function submit() {
+    buffers[mode] = input.value;
+    try {
+      localStorage.setItem(MODES[mode].storageKey, input.value);
+      localStorage.setItem(MODE_KEY, mode);
+    } catch (e) { /* storage unavailable; nothing to persist */ }
+    render().then(() => {
+      if (!status.classList.contains('error')) {
+        setStatus(status.textContent + ' · saved', 'ok');
+      }
+    });
+  }
+
+  function setMode(next) {
+    buffers[mode] = input.value;
+    mode = next;
+    modeSelect.value = mode;
+    input.value = buffers[mode];
+    for (const list of document.querySelectorAll('details.help ul')) {
+      list.hidden = list.dataset.mode !== mode;
+    }
+  }
+
+  function downloadSvg() {
+    const svg = diagram.querySelector('svg');
+    if (!svg) return;
+    const source = new XMLSerializer().serializeToString(svg);
+    const blob = new Blob([source], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = MODES[mode].file;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
+
+  let savedMode = null;
+  for (const [key, m] of Object.entries(MODES)) {
+    let saved = null;
+    try { saved = localStorage.getItem(m.storageKey); } catch (e) { /* ignore */ }
+    buffers[key] = saved != null ? saved : m.example;
+  }
+  try { savedMode = localStorage.getItem(MODE_KEY); } catch (e) { /* ignore */ }
+  input.value = buffers.flow;
+  setMode(MODES[savedMode] ? savedMode : 'flow');
+
+  if (typeof mermaid === 'undefined') {
+    diagram.innerHTML = '<p class="empty">Could not load Mermaid from the CDN. Check your connection and reload.</p>';
+    setStatus('Renderer failed to load', 'error');
+    return;
+  }
+
+  initMermaid();
+  input.addEventListener('input', scheduleRender);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      submit();
+    }
+  });
+  document.getElementById('submit').addEventListener('click', submit);
+  document.getElementById('download').addEventListener('click', downloadSvg);
+  directionSelect.addEventListener('change', render);
+  modeSelect.addEventListener('change', () => {
+    setMode(modeSelect.value);
+    try { localStorage.setItem(MODE_KEY, mode); } catch (e) { /* ignore */ }
+    render();
+  });
+  darkQuery.addEventListener('change', () => { initMermaid(); render(); });
+
+  render();
+})();
+</script>
+</body>
+</html>
