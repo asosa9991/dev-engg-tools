@@ -472,6 +472,55 @@
   .pick input { width: 16px; height: 16px; accent-color: var(--ink); cursor: pointer; vertical-align: middle; }
   .insights.no-burndown { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 
+  /* ---------- Standup ---------- */
+  .su-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 14px 24px; padding: 36px 0 16px; }
+  .su-head h1 { font: 700 clamp(28px, 3.2vw, 42px)/1.06 var(--font-display); letter-spacing: -0.025em; margin: 0 0 8px; }
+  .su-head p { margin: 0; color: var(--ink-2); max-width: 70ch; }
+  .su-summary { display: flex; flex-wrap: wrap; gap: 8px 24px; padding: 12px 0 16px; border-bottom: 1px solid var(--line); font-size: 15px; color: var(--ink-2); }
+  .su-summary strong { color: var(--ink); }
+  .su-people { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(440px, 100%), 1fr)); gap: 16px; margin-top: 20px; align-items: start; }
+  .su-person { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px 12px; min-width: 0; }
+  .su-person-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .su-person-head h2 { font: 650 18px/1.2 var(--font-display); margin: 0; letter-spacing: -0.01em; }
+  .su-person-head .muted { margin-left: auto; font-size: 13px; text-align: right; }
+  .avatar.md { width: 32px; height: 32px; font-size: 12px; }
+  .su-group { margin-top: 10px; }
+  .su-group h3 { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 700; color: var(--ink-2); margin: 0 0 2px; }
+  .su-item { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 9px; width: 100%; padding: 6px 8px; margin: 0 -8px; width: calc(100% + 16px); border: 0; border-radius: 8px; background: none; text-align: left; cursor: pointer; }
+  .su-item:hover { background: var(--raised); }
+  .su-item .icon { margin-top: 3px; }
+  .su-line { display: block; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .su-detail { display: block; font-size: 13px; color: var(--ink-2); }
+  .su-empty { font-size: 14px; color: var(--muted); margin: 8px 0 4px; }
+  .su-prompt { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; color: var(--ink-2); margin: 10px 0 4px; }
+
+  /* ---------- Planning ---------- */
+  .plan { margin: 0 0 24px; }
+  .plan .panel-head select { padding-top: 4px; padding-bottom: 4px; }
+  .plan-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 20px 32px; margin-top: 12px; }
+  .plan-big { font: 700 30px/1.1 var(--font-display); letter-spacing: -0.02em; margin: 6px 0 22px; }
+  .cap-bar { position: relative; height: 20px; border-radius: 4px; background: var(--raised); border: 1px solid var(--hair); }
+  .cap-seg { position: absolute; top: 0; bottom: 0; }
+  .cap-seg:first-child { border-radius: 3px 0 0 3px; }
+  .cap-seg.sel { background: repeating-linear-gradient(45deg, var(--series-1) 0 3px, transparent 3px 7px); box-shadow: inset 0 0 0 1px var(--series-1); }
+  .cap-mark { position: absolute; top: -7px; bottom: -7px; width: 2px; margin-left: -1px; background: var(--ink); }
+  .cap-mark span { position: absolute; top: -19px; left: 50%; transform: translateX(-50%); font-size: 12px; font-weight: 700; white-space: nowrap; }
+  .plan-verdict { display: flex; align-items: flex-start; gap: 8px; font-size: 15px; margin: 14px 0 0; }
+  .plan-note { font-size: 13px; color: var(--muted); margin: 6px 0 0; max-width: 60ch; }
+  .velocity { margin-top: 16px; }
+  .velocity svg { display: block; width: 100%; max-width: 320px; overflow: visible; }
+  .plan-table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+  .plan-table th, .plan-table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--hair); vertical-align: middle; }
+  .plan-table th { font-size: 12px; color: var(--muted); font-weight: 700; }
+  .plan-table td.r, .plan-table th.r { text-align: right; }
+  .plan-table input { width: 64px; padding: 4px 8px; text-align: right; }
+  .plan-table .who { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .plan-table .who span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fit { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+  .fit-bar { position: relative; flex: none; width: 72px; height: 8px; border-radius: 3px; background: var(--raised); border: 1px solid var(--hair); overflow: hidden; }
+  .fit-bar span { position: absolute; top: 0; bottom: 0; left: 0; }
+  .plan-scroll { overflow-x: auto; }
+
   /* ---------- Snapshot ---------- */
   .snap-wrap { position: fixed; inset: 0; z-index: 55; display: grid; place-items: center; padding: 24px; background: rgba(10, 16, 22, .55); }
   .snap {
@@ -519,6 +568,8 @@
     .tabs { margin: 0; order: 5; width: 100%; }
     .tab { padding: 8px 12px; }
     .create-form .row2, .create-form .row3 { grid-template-columns: 1fr; }
+    .plan-grid { grid-template-columns: minmax(0, 1fr); }
+    .plan-table { min-width: 560px; }
     .bulk-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
     .bulk-row .bar-label, .bulk-row > span:last-child { grid-column: 1 / -1; }
     .bulk-row .select, .bulk-row .points-in, .bulk-row .btn { width: 100%; max-width: none; }
@@ -534,6 +585,7 @@
   <span class="brand">Sprint board</span>
   <nav class="tabs" id="tabs" aria-label="Views" hidden>
     <button type="button" class="tab" data-tab="sprint">Sprint</button>
+    <button type="button" class="tab" data-tab="standup">Standup</button>
     <button type="button" class="tab" data-tab="mine">My work <span class="count" id="mineCount" hidden></span></button>
   </nav>
   <div class="pickers" id="pickers" hidden>
@@ -593,6 +645,7 @@
   <div id="sprintView" hidden>
     <div id="banner"></div>
     <section class="hero" id="hero" aria-label="Sprint summary"></section>
+    <section class="plan" id="planPanel" aria-label="Sprint planning" hidden></section>
     <section class="filters" id="filters" aria-label="Filters"></section>
     <section class="insights">
       <div class="panel" id="burndownPanel"></div>
@@ -603,6 +656,7 @@
   </div>
 
   <div id="mineView" hidden></div>
+  <div id="standupView" hidden></div>
 </main>
 
 <div class="scrim" id="scrim" hidden></div>
@@ -796,6 +850,15 @@
     })();
     const at = (base, dayOffset, hour) => new Date(base.getFullYear(), base.getMonth(), base.getDate() + dayOffset, hour);
     const ago = (days, hour = 10) => at(startOfDay(today), -days, hour);
+    // Demo changes are timed relative to now, skipping weekends, so the Standup
+    // view always has something in its default window (one working day back).
+    const hoursAgo = (hrs) => new Date(Date.now() - hrs * 3600e3);
+    const workAgo = (n) => {
+      if (n === 0) return hoursAgo(1);
+      let d = new Date(Date.now() + 3600e3);
+      for (let k = 0; k < n;) { d = new Date(d.getTime() - DAY_MS); if (!isWeekend(d)) k += 1; }
+      return d;
+    };
 
     // [num, type, summary, epic, person, points, status, priority, extra]
     const active = [
@@ -806,7 +869,7 @@
         desc: 'JPY has no minor units, but the tax line shows ¥1,204.000.\nUse the currency exponent from the pricing service instead of a fixed 2.' }],
       [204, 'T', 'Add p95 latency SLO alerts for /payouts', 3, 5, 3, 'Done', 3, { done: 2 }],
       [205, 'S', 'Velocity rule: block more than 5 cards per device per hour', 1, 3, 5, 'Done', 4, { done: 4, subtasks: [3, 3] }],
-      [206, 'T', 'Move fraud score consumers to the v2 topic', 1, 4, 3, 'Done', 3, { done: 4 }],
+      [206, 'T', 'Move fraud score consumers to the v2 topic', 1, 4, 3, 'Done', 3, { done: 4, recent: true }],
       [207, 'B', 'Payout webhooks retried without backoff', 2, 1, 3, 'Done', 4, { done: 2, labels: ['incident-follow-up'] }],
       [208, 'S', 'Address autocomplete in the shipping step', 0, 2, 5, 'QA', 3, { since: 1, labels: ['frontend'] }],
       [209, 'S', 'Payout batch status endpoint', 2, 5, 5, 'QA', 3, { since: 2 }],
@@ -868,8 +931,8 @@
         const st = statuses[statusName];
         const type = types[t];
         const created = at(sprintStartDate, -9 - (num % 7), 11);
-        const resolved = x.done != null ? at(sprintStartDate, x.done, 15) : null;
-        const since = x.since != null ? ago(x.since) : null;
+        const resolved = x.recent ? hoursAgo(2) : x.done != null ? at(sprintStartDate, x.done, 15) : null;
+        const since = x.since != null ? workAgo(x.since) : null;
         const [doneSubs, totalSubs] = x.subtasks || [0, 0];
         return {
           key: 'PAY-' + num,
@@ -917,10 +980,31 @@
     sprints[0].completeDate = at(sprintStart, -3, 17);
     sprints[0].end = at(sprintStart, -3, 17);
 
+    // Three earlier closed sprints, so velocity has some history (34, 40, 37 pts done).
+    // [points, person] for finished work, then work left unfinished.
+    const historyPlan = [
+      [38, 'Payouts v2 API design and sandbox', -56, 61, [[5, 1], [3, 2], [8, 0], [2, 5], [5, 3], [3, 4], [2, 1], [3, 0], [1, 2], [2, 5]], [[5, 3], [3, 4]]],
+      [39, 'Fraud rules engine foundations', -42, 73, [[8, 3], [5, 4], [3, 0], [5, 1], [3, 2], [2, 5], [5, 0], [3, 1], [2, 2], [2, 3], [2, 4]], [[3, 5]]],
+      [40, 'Checkout reliability fixes', -28, 86, [[5, 0], [3, 2], [5, 1], [2, 3], [8, 4], [3, 5], [2, 0], [3, 1], [2, 2], [1, 3], [3, 5]], [[5, 2], [2, 0]]],
+    ];
+    const pastWork = ['Ledger export for finance', 'Card BIN lookup cache', 'Retry queue for webhooks', 'Merchant onboarding checklist',
+      'Refund status page', 'Payout fee breakdown', 'Risk score explanations', 'Clearer checkout error messages', 'Settlement report filters',
+      'Chargeback evidence upload', 'Currency rounding rules', 'Payment method icons', 'Fraud alert emails', 'Dispute timeline view',
+      'Payout holiday calendar', 'API rate limit headers', 'Session timeout on checkout', 'Statement PDF footer', 'Velocity rule audit log',
+      'Partner bank health check', 'Invoice numbering', 'Tax ID validation', 'Saved card expiry reminder', 'Rotate webhook signing keys'];
+    const pastRows = {};
+    for (const [id, goal, offset, firstNum, done, open] of historyPlan) {
+      sprints.unshift({ id, name: `Sprint ${id}`, state: 'closed', goal, start: at(sprintStart, offset, 9),
+        end: at(sprintStart, offset + 11, 17), completeDate: at(sprintStart, offset + 11, 17) });
+      pastRows[id] = [...done.map((d, n) => [d, 'Done', { done: n % 10 }]), ...open.map((d) => [d, 'To Do', {}])]
+        .map(([[pts, person], status, x], n) => [firstNum + n, 'STBS'[n % 4], pastWork[(firstNum + n) % pastWork.length], n % 4, person, pts, status, 3, x]);
+    }
+
     const issuesBySprint = {
-      41: makeIssues(previous, sprints[0].start),
-      42: makeIssues(active, sprints[1].start),
-      43: makeIssues(upcoming, sprints[2].start),
+      41: makeIssues(previous, sprints.find((sp) => sp.id === 41).start),
+      42: makeIssues(active, sprints.find((sp) => sp.id === 42).start),
+      43: makeIssues(upcoming, sprints.find((sp) => sp.id === 43).start),
+      ...Object.fromEntries(historyPlan.map(([id]) => [id, makeIssues(pastRows[id], sprints.find((sp) => sp.id === id).start)])),
     };
     // [num, type, summary, epic, person, points, status, priority, extra], in rank order
     const backlogRows = [
@@ -939,7 +1023,7 @@
       [252, 'S', 'Merchant payout statements by email', 2, -1, 5, 'To Do', 2, {}],
       [254, 'T', 'Archive fraud decisions older than two years', 1, -1, null, 'To Do', 1, {}],
     ];
-    const backlog = makeIssues(backlogRows, sprints[1].start);
+    const backlog = makeIssues(backlogRows, sprints.find((sp) => sp.id === 42).start);
 
     // Work assigned to "you" (Marcus) on other teams' boards, for the My work tab.
     const me = people[1];
@@ -1001,6 +1085,18 @@
     }
 
     let nextNum = 300;
+
+    // Standup: what changed in the active sprint, as Jira's history would show it.
+    // Seeded from the demo dates, plus a log of edits made during this session.
+    const seed = new Map(issuesBySprint[42].map((i) => [i.key, { status: i.status, resolved: i.resolved, statusChanged: i.statusChanged, assignee: i.assignee, added: i.added, flagged: i.flagged }]));
+    const removedDemo = {
+      ...makeIssues([[199, 'T', 'Export fraud decisions to the data lake', 1, 4, 3, 'To Do', 2, {}]], sprints.find((sp) => sp.id === 42).start)[0],
+      project: { key: 'PAY', name: 'Payments' }, offBoard: true, sprint: null,
+    };
+    const editLog = [];
+    const logEdit = (key, kind, extra) => editLog.push({ key, at: new Date(), who: me.name, kind, ...extra });
+    const findIssue = (key) => everyIssue.get(key);
+
     return {
       kind: 'demo',
       label: 'Demo data',
@@ -1015,6 +1111,7 @@
           issues,
           addedKeys: new Set(issues.filter((i) => i.added).map((i) => i.key)),
           removedCount: sprintId === 42 ? 1 : 0,
+          removedKeys: sprintId === 42 ? ['PAY-199'] : [],
         };
       },
       async myWork() {
@@ -1048,6 +1145,7 @@
         };
         (sprint ? issuesBySprint[sprint.id] : backlog).push(issue);
         everyIssue.set(key, issue);
+        if (sprint) logEdit(key, 'added', { sprintId: sprint.id });
         if (input.cloneOf) {
           link(key, 'cloneOf', 'clones', input.cloneOf);
           link(input.cloneOf, 'clonedBy', 'is cloned by', key);
@@ -1064,9 +1162,58 @@
         };
       },
       async updateFields() { await new Promise((r) => setTimeout(r, 200)); },
-      async transition() { await new Promise((r) => setTimeout(r, 200)); },
-      async assign() { await new Promise((r) => setTimeout(r, 200)); },
-      async setEstimate() { await new Promise((r) => setTimeout(r, 200)); },
+      async transition(key, id) {
+        await new Promise((r) => setTimeout(r, 200));
+        const i = findIssue(key);
+        if (i) logEdit(key, 'status', { from: i.status, to: id });
+      },
+      async assign(key, user) {
+        await new Promise((r) => setTimeout(r, 200));
+        const i = findIssue(key);
+        if (i) logEdit(key, 'assignee', { from: i.assignee ? i.assignee.name : null, to: user ? user.name : null });
+      },
+      async setEstimate(key, value) {
+        await new Promise((r) => setTimeout(r, 200));
+        const i = findIssue(key);
+        if (i) logEdit(key, 'estimate', { from: i.estimate == null ? null : String(i.estimate), to: String(value) });
+      },
+      async historyIssues(boardId, sprintId) {
+        await new Promise((r) => setTimeout(r, 80));
+        return issuesBySprint[sprintId] || [];
+      },
+      async standupChanges(boardId, sprint, since) {
+        await new Promise((r) => setTimeout(r, 150));
+        const now = new Date();
+        const events = new Map();
+        const add = (key, ev) => {
+          if (ev.at < since || ev.at > now) return;
+          if (!events.has(key)) events.set(key, []);
+          events.get(key).push(ev);
+        };
+        if (sprint.id === 42) {
+          const before = { 'In Progress': 'To Do', 'In Review': 'In Progress', QA: 'In Review', Done: 'QA' };
+          for (const [key, sd] of seed) {
+            const who = sd.assignee ? sd.assignee.name : 'Priya Natarajan';
+            if (sd.resolved) add(key, { at: sd.resolved, who, kind: 'status', from: 'QA', to: 'Done' });
+            else if (sd.statusChanged && before[sd.status]) add(key, { at: sd.statusChanged, who, kind: 'status', from: before[sd.status], to: sd.status });
+            if (sd.added) add(key, { at: hoursAgo(5), who: 'Priya Natarajan', kind: 'added' });
+            if (sd.flagged) add(key, { at: hoursAgo(4), who, kind: 'flagged' });
+          }
+          add('PAY-216', { at: hoursAgo(3), who: 'Sofia Alvarez', kind: 'blockedBy', to: 'PAY-222' });
+        }
+        for (const ev of editLog) if (!ev.sprintId || ev.sprintId === sprint.id) add(ev.key, { ...ev });
+        const removed = [];
+        if (sprint.id === 42 && hoursAgo(6) >= since) {
+          removed.push({ issue: removedDemo, events: [{ at: hoursAgo(6), who: 'Priya Natarajan', kind: 'removed' }] });
+        }
+        for (const [key, list] of events) list.sort((a, b) => a.at - b.at);
+        // Issues moved out during this session
+        for (const ev of editLog.filter((e) => e.kind === 'removed' && e.sprintId === sprint.id && e.at >= since)) {
+          const i = findIssue(ev.key);
+          if (i && !removed.some((r) => r.issue.key === ev.key)) removed.push({ issue: { ...i, offBoard: true, project: { key: 'PAY', name: 'Payments' } }, events: [ev] });
+        }
+        return { events, removed };
+      },
       async setEpic() { await new Promise((r) => setTimeout(r, 200)); },
       async setEpicMany() { await new Promise((r) => setTimeout(r, 250)); },
       async moveIssues(keys, target) {
@@ -1077,9 +1224,12 @@
           for (const list of [...Object.values(issuesBySprint), backlog]) {
             const n = list.findIndex((i) => i.key === key);
             if (n < 0) continue;
+            const fromId = Number(Object.keys(issuesBySprint).find((id) => issuesBySprint[id] === list));
             const [issue] = list.splice(n, 1);
             issue.added = !!(destSprint && destSprint.state === 'active');
             dest.push(issue);
+            if (destSprint) logEdit(key, 'added', { sprintId: destSprint.id });
+            if (fromId) logEdit(key, 'removed', { sprintId: fromId });
             break;
           }
         }
@@ -1352,19 +1502,19 @@
     }
     // Jira Cloud moved JQL search to /search/jql (token paging); Server and Data
     // Center still use /search (startAt paging). Try the likely one first.
-    async function search(jql, fields, limit) {
+    async function search(jql, fields, limit, extra = {}) {
       const viaJql = async () => {
         const out = [];
         let token = null;
         for (let guard = 0; guard < 20 && out.length < limit; guard++) {
-          const r = await get('/rest/api/2/search/jql', { jql, fields, maxResults: 100, ...(token ? { nextPageToken: token } : {}) });
+          const r = await get('/rest/api/2/search/jql', { jql, fields, maxResults: 100, ...extra, ...(token ? { nextPageToken: token } : {}) });
           out.push(...(r.issues || []));
           token = r.nextPageToken;
           if (!token || r.isLast) break;
         }
         return out;
       };
-      const viaSearch = () => pages('/rest/api/2/search', { jql, fields }, (r) => r.issues, limit);
+      const viaSearch = () => pages('/rest/api/2/search', { jql, fields, ...extra }, (r) => r.issues, limit);
       const [first, second] = conn.email ? [viaJql, viaSearch] : [viaSearch, viaJql];
       try { return await first(); } catch (e) {
         if (e.status === 404 || e.status === 410 || e.status === 405) return second();
@@ -1418,7 +1568,8 @@
         const addedKeys = contents && contents.issueKeysAddedDuringSprint ? new Set(Object.keys(contents.issueKeysAddedDuringSprint)) : null;
         if (addedKeys) issues.forEach((i) => { i.added = addedKeys.has(i.key); });
         const removedCount = contents && Array.isArray(contents.puntedIssues) ? contents.puntedIssues.length : null;
-        return { issues, addedKeys, removedCount };
+        const removedKeys = contents && Array.isArray(contents.puntedIssues) ? contents.puntedIssues.map((x) => x.key).filter(Boolean) : [];
+        return { issues, addedKeys, removedCount, removedKeys };
       },
 
       // Open issues assigned to the token's owner, anywhere in Jira.
@@ -1469,6 +1620,36 @@
       },
       async setEpicMany(keys, epicKey) {
         await request('POST', `/rest/agile/1.0/epic/${epicKey ? encodeURIComponent(epicKey) : 'none'}/issue`, null, { issues: keys });
+      },
+
+      // Finished-sprint issues for velocity: just status, owner, finish date and estimate.
+      async historyIssues(boardId, sprintId, config) {
+        const fields = ['status', 'assignee', 'resolutiondate', 'issuetype', config.estimate.fieldId].filter(Boolean).join(',');
+        const raw = await pages(`/rest/agile/1.0/board/${boardId}/sprint/${sprintId}/issue`, { fields }, (r) => r.issues);
+        return raw.map((r) => normalize(r, config.estimate)).filter((i) => !i.isSubtask);
+      },
+
+      // Standup: Jira's change history for the sprint's issues since a time,
+      // plus issues taken out of the sprint (the sprint report lists those).
+      async standupChanges(boardId, sprint, since, config, removedKeys) {
+        const p2 = (n) => String(n).padStart(2, '0');
+        const when = `${since.getFullYear()}/${p2(since.getMonth() + 1)}/${p2(since.getDate())} ${p2(since.getHours())}:${p2(since.getMinutes())}`;
+        const fields = ['summary', 'status', 'assignee', 'issuetype', 'priority', 'project', config.estimate.fieldId].filter(Boolean).join(',');
+        const recentRemoved = (removedKeys || []).slice(0, 100);
+        const [inSprint, removedRaw] = await Promise.all([
+          search(`sprint = ${Number(sprint.id)} AND updated >= "${when}"`, fields, 1000, { expand: 'changelog' }),
+          recentRemoved.length
+            ? search(`key in (${recentRemoved.join(',')}) AND updated >= "${when}"`, fields, 100, { expand: 'changelog' }).catch(() => [])
+            : Promise.resolve([]),
+        ]);
+        const events = new Map();
+        for (const r of inSprint) {
+          const list = historyEvents(r, since, sprint, config.estimate.fieldId);
+          if (list.length) events.set(r.key, list);
+        }
+        const removed = removedRaw.map((r) => ({ issue: normalizeAnywhere(r, null), events: historyEvents(r, since, sprint, config.estimate.fieldId) }))
+          .filter((x) => x.events.some((e) => e.kind === 'removed'));
+        return { events, removed };
       },
 
       // target: a sprint id, or BACKLOG. Jira takes at most 50 issues per call.
@@ -1547,6 +1728,32 @@
 
   const BACKLOG_LIMIT = 1000;
 
+  // Turns one issue's Jira changelog into standup events since a time.
+  function historyEvents(raw, since, sprint, estimateFieldId) {
+    const out = [];
+    const ids = (v) => String(v || '').split(/\s*,\s*/).filter(Boolean);
+    for (const hst of (raw.changelog && raw.changelog.histories) || []) {
+      const at = parseDate(hst.created);
+      if (!at || at < since) continue;
+      const who = hst.author ? hst.author.displayName || hst.author.name || null : null;
+      for (const it of hst.items || []) {
+        const field = String(it.field || '').toLowerCase();
+        const ev = (kind, extra) => out.push({ at, who, kind, ...extra });
+        if (field === 'status') ev('status', { from: it.fromString, to: it.toString, toId: it.to != null ? String(it.to) : null });
+        else if (field === 'assignee') ev('assignee', { from: it.fromString, to: it.toString });
+        else if (field === 'sprint') {
+          const was = ids(it.from).includes(String(sprint.id)), now = ids(it.to).includes(String(sprint.id));
+          if (!was && now) ev('added'); else if (was && !now) ev('removed');
+        } else if (field === 'flagged') ev(it.toString ? 'flagged' : 'unflagged');
+        else if ((estimateFieldId && it.fieldId === estimateFieldId) || /^story point/i.test(it.field || '')) ev('estimate', { from: it.fromString, to: it.toString });
+        else if (field === 'link' && it.toString && /blocked by|depends on/i.test(it.toString)) {
+          ev('blockedBy', { to: (it.toString.match(/[A-Z][A-Z0-9_]*-\d+/) || [])[0] || it.toString });
+        }
+      }
+    }
+    return out.sort((a, b) => a.at - b.at);
+  }
+
   // The Sprint field comes back as objects (Cloud, newer Data Center) or as
   // "com.atlassian.greenhopper.service.sprint.Sprint@1a2b[id=3,rapidViewId=7,state=ACTIVE,name=Sprint 3,...]".
   function parseSprints(v) {
@@ -1563,7 +1770,7 @@
   // ======================================================================
   // App state
   // ======================================================================
-  const prefs = Object.assign({ view: 'board', lanes: 'none', metric: 'points', tab: 'sprint', backlogView: 'list', platforms: null, features: [], platformAssignee: {} }, store.get('localStorage', 'sprintboard:prefs', {}));
+  const prefs = Object.assign({ view: 'board', lanes: 'none', metric: 'points', tab: 'sprint', backlogView: 'list', standupDays: 1, pointsPerDay: 1, platforms: null, features: [], platformAssignee: {} }, store.get('localStorage', 'sprintboard:prefs', {}));
   const state = {
     source: null,
     boards: [], boardId: null,
@@ -2763,6 +2970,7 @@
       count.textContent = `${plural(picked.length, 'issue', 'issues')} selected`;
       if (usesEstimates()) size.textContent = fmtVal(sumOf(picked));
       syncApply();
+      if (planPreview) planPreview();
     };
     bar.refresh();
     return bar;
@@ -3211,6 +3419,7 @@
   // After a save: redraw the board behind the drawer and refresh My work.
   function afterEdit() {
     if (state.data) renderAll();
+    if (currentScreen === 'standup') loadStandup(true);
     state.mine = null;
     refreshMine().catch(() => { /* the tab shows the error when opened */ });
   }
@@ -3525,6 +3734,432 @@
         $('boardSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
       } } });
     }
+  }
+
+  // ======================================================================
+  // Standup: what changed in the sprint since the last working day, by person
+  // ======================================================================
+  const STANDUP_WINDOWS = [[1, 'Last working day'], [2, '2 working days'], [5, 'Last week']];
+  const fmtTime = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
+  const fmtWeekdayLong = new Intl.DateTimeFormat(undefined, { weekday: 'long' });
+  const fmtWhen = (d) => {
+    const diff = Math.round((startOfDay(new Date()) - startOfDay(d)) / DAY_MS);
+    return `${diff === 0 ? 'today' : diff === 1 ? 'yesterday' : fmtWeekday.format(d)} ${fmtTime.format(d)}`;
+  };
+
+  // N working days back from now, at the same time of day (Monday 10:00 -> Friday 10:00).
+  function standupSince(days) {
+    let d = new Date();
+    for (let n = 0; n < days;) { d = new Date(d.getTime() - DAY_MS); if (!isWeekend(d)) n += 1; }
+    return d;
+  }
+  function sinceLabel(d) {
+    const diff = Math.round((startOfDay(new Date()) - startOfDay(d)) / DAY_MS);
+    const day = diff === 0 ? 'today' : diff === 1 ? 'yesterday' : diff < 7 ? fmtWeekdayLong.format(d) : fmtDay.format(d);
+    return `${day}, ${fmtTime.format(d)}`;
+  }
+
+  async function loadStandup(force) {
+    const sp = state.data && state.data.sprint;
+    if (!sp || sp.state !== 'active') return renderStandup();
+    const days = prefs.standupDays || 1;
+    const key = `${state.boardId}:${sp.id}:${days}`;
+    if (!force && state.standup && state.standup.key === key) return renderStandup();
+    const run = state.standup = { key, since: standupSince(days), loading: true };
+    renderStandup();
+    try {
+      run.data = await state.source.standupChanges(state.boardId, sp, run.since, state.config, state.data.removedKeys || []);
+    } catch (err) {
+      run.error = err.message;
+    }
+    run.loading = false;
+    if (state.standup === run && currentScreen === 'standup') renderStandup();
+  }
+
+  function standupModel(changes) {
+    const known = new Map(state.data.issues.map((i) => [i.status.toLowerCase(), i.category]));
+    const cat = (name) => known.get(String(name || '').toLowerCase()) ||
+      (/done|closed|resolved|complete/i.test(name || '') ? 'done' : /to ?do|backlog|open|new|selected/i.test(name || '') ? 'todo' : 'progress');
+    const rank = { todo: 0, progress: 1, done: 2 };
+    const people = new Map();
+    const personOf = (p) => {
+      const id = p ? p.id : '__none';
+      if (!people.has(id)) people.set(id, { id, person: p, name: p ? p.name : 'Unassigned', finished: [], moved: [], blocked: [], stale: [], other: [], inProgress: 0, todo: [] });
+      return people.get(id);
+    };
+    const totals = { finished: 0, finishedValue: 0, moved: 0, newlyBlocked: 0, added: 0, removed: changes.removed.length };
+    const now = new Date();
+    for (const i of state.data.issues) {
+      const p = personOf(i.assignee);
+      const evs = changes.events.get(i.key) || [];
+      const st = evs.filter((e) => e.kind === 'status');
+      const last = st[st.length - 1];
+      if (i.category === 'done' && last && cat(last.to) === 'done') {
+        p.finished.push({ issue: i, at: last.at, who: last.who });
+        totals.finished += 1;
+        totals.finishedValue += valueOf(i);
+      } else if (last && st[0].from !== last.to) {
+        p.moved.push({ issue: i, from: st[0].from, to: last.to, at: last.at, who: last.who, back: rank[cat(last.to)] < rank[cat(st[0].from)] });
+        totals.moved += 1;
+      }
+      const waits = waitsOnOpen(i);
+      if (i.category !== 'done' && (isBlocked(i) || waits.length)) {
+        const isNew = evs.some((e) => e.kind === 'flagged' || e.kind === 'blockedBy');
+        p.blocked.push({ issue: i, isNew, why: [isBlocked(i) ? (i.flagged ? 'Flagged as blocked' : `Status is ${i.status}`) : null, waits.length ? `Waits on ${keyList(waits)}` : null].filter(Boolean).join(', ') });
+        if (isNew) totals.newlyBlocked += 1;
+      }
+      if (i.category === 'progress') {
+        p.inProgress += 1;
+        if (!st.length && !isBlocked(i) && !waits.length) p.stale.push({ issue: i, days: i.statusChanged ? Math.floor((now - i.statusChanged) / DAY_MS) : null });
+      }
+      if (i.category === 'todo') p.todo.push(i);
+      const other = [];
+      for (const e of evs) {
+        if (e.kind === 'added') other.push('Added to the sprint');
+        else if (e.kind === 'assignee') other.push(e.to ? (e.from ? `Reassigned from ${e.from}` : 'Assigned') : `Unassigned from ${e.from}`);
+        else if (e.kind === 'estimate') other.push(`Estimate ${e.from || 'none'} to ${e.to || 'none'}`);
+      }
+      if (evs.some((e) => e.kind === 'added')) totals.added += 1;
+      if (other.length) p.other.push({ issue: i, text: [...new Set(other)].join(', '), who: evs[evs.length - 1].who });
+    }
+    const list = [...people.values()].sort((a, b) => (a.id === '__none') - (b.id === '__none') || a.name.localeCompare(b.name));
+    return { people: list, totals };
+  }
+
+  function renderStandup() {
+    const view = $('standupView');
+    if (!state.data) { fill(view, h('p', { class: 'page-note' }, 'Loading the sprint…')); return; }
+    const sp = state.data.sprint;
+    if (sp.state !== 'active') {
+      const active = state.sprints.find((x) => x.state === 'active');
+      fill(view, h('section', { class: 'su-head' }, h('div', null,
+        h('h1', null, 'Standup'),
+        h('p', null, active
+          ? `Standup follows the sprint in progress. You're looking at ${isBacklog() ? 'the backlog' : sp.name}.`
+          : 'There is no sprint in progress on this board right now.'),
+        active ? h('p', { style: 'margin-top:14px' }, h('button', { type: 'button', class: 'btn primary', onclick: () => selectSprint(active.id) }, `Open ${active.name}`)) : null)));
+      return;
+    }
+    const run = state.standup;
+    const days = prefs.standupDays || 1;
+    const since = run ? run.since : standupSince(days);
+    const windows = h('div', { class: 'segmented', role: 'group', 'aria-label': 'Changes since' },
+      STANDUP_WINDOWS.map(([n, label]) => h('button', { type: 'button', 'aria-pressed': String(days === n),
+        onclick: () => { prefs.standupDays = n; savePrefs(); loadStandup(); } }, label)));
+    const head = h('section', { class: 'su-head' },
+      h('div', null,
+        h('h1', null, `Since ${sinceLabel(since)}`),
+        h('p', null, `${sp.name}: what changed in Jira, person by person. Tap any issue to update it.`)),
+      windows);
+    if (!run || run.loading) { fill(view, head, h('p', { class: 'page-note' }, 'Loading changes from Jira…')); return; }
+    if (run.error) {
+      fill(view, head, h('div', { class: 'banner', role: 'alert' }, icon('stop'), h('span', null, `Couldn't load the changes: ${run.error}`),
+        h('button', { type: 'button', class: 'btn', onclick: () => loadStandup(true) }, 'Try again')));
+      return;
+    }
+    const { people, totals } = standupModel(run.data);
+    const key = (iconName, tone, label, value, extra) => h('span', { class: 'key' }, icon(iconName, 'tone-' + tone),
+      h('span', null, `${label} `, h('strong', null, String(value)), extra ? ` (${extra})` : ''));
+    const summary = h('div', { class: 'su-summary', role: 'status' },
+      key('check', 'good', 'Finished', totals.finished, totals.finished && metric() === 'points' ? fmtVal(totals.finishedValue) : null),
+      key('dep', 'muted', 'Moved', totals.moved),
+      key('flag', totals.newlyBlocked ? 'critical' : 'muted', 'Newly blocked', totals.newlyBlocked),
+      key('plus', 'muted', 'Added', totals.added),
+      key('close', 'muted', 'Removed', totals.removed));
+
+    const item = (issue, detail) => h('button', { type: 'button', class: 'su-item', onclick: (e) => openDrawer(issue, e.currentTarget) },
+      h('span', { style: `color:var(--type-${issue.typeKind})`, title: issue.type }, icon(issue.typeKind)),
+      h('span', { style: 'min-width:0' },
+        h('span', { class: 'su-line' }, h('span', { class: 'muted' }, `${issue.key}  `), issue.summary),
+        detail ? h('span', { class: 'su-detail' }, detail) : null));
+    const group = (iconName, tone, label, items) => items.length
+      ? h('div', { class: 'su-group' }, h('h3', null, icon(iconName, 'tone-' + tone), `${label} `, h('span', { class: 'muted' }, String(items.length))), items)
+      : null;
+    const by = (who, p) => (who && p.person && who !== p.person.name ? `, by ${who}` : '');
+
+    const cards = people.map((p) => {
+      const groups = [
+        group('check', 'good', 'Finished', p.finished.map((x) => item(x.issue, `Done ${fmtWhen(x.at)}${by(x.who, p)}`))),
+        group('dep', 'muted', 'Moved', p.moved.map((x) => item(x.issue, `${x.from} → ${x.to}${x.back ? ' (moved back)' : ''}, ${fmtWhen(x.at)}${by(x.who, p)}`))),
+        group('flag', 'critical', 'Blocked or waiting', p.blocked.map((x) => item(x.issue, `${x.why}${x.isNew ? ' (new)' : ''}`))),
+        group('clock', 'serious', 'In progress, no change', p.stale.map((x) => item(x.issue, x.days != null ? `${x.issue.status} for ${plural(x.days, 'day', 'days')}` : x.issue.status))),
+        group('subtask', 'muted', 'Other updates', p.other.map((x) => item(x.issue, x.text))),
+      ].filter(Boolean);
+      const next = p.todo.slice().sort((a, b) => b.priorityRank - a.priorityRank)[0];
+      const idle = p.id !== '__none' && !p.inProgress && next;
+      return h('section', { class: 'su-person', 'aria-label': p.name },
+        h('div', { class: 'su-person-head' },
+          p.id === '__none' ? h('span', { class: 'avatar md none' }, icon('user')) : h('span', { class: 'avatar md' }, initials(p.name)),
+          h('h2', null, p.name),
+          h('span', { class: 'muted' }, [p.inProgress ? `${p.inProgress} in progress` : null, p.todo.length ? `${p.todo.length} to do` : null].filter(Boolean).join(', '))),
+        groups.length ? groups : h('p', { class: 'su-empty' }, `No updates since ${sinceLabel(since).split(',')[0]}.`),
+        idle ? h('div', { class: 'su-prompt' }, icon('alert', 'tone-warning'), h('span', null, 'Nothing in progress. Next up by priority:')) : null,
+        idle ? item(next, `${next.priority} priority`) : null);
+    });
+    const removed = run.data.removed.length ? h('section', { class: 'su-person' },
+      h('div', { class: 'su-person-head' }, icon('close', 'tone-muted'), h('h2', null, 'Removed from the sprint')),
+      run.data.removed.map((x) => {
+        const ev = x.events.find((e) => e.kind === 'removed');
+        return item(x.issue, ev ? `${fmtWhen(ev.at)}${ev.who ? `, by ${ev.who}` : ''}` : null);
+      })) : null;
+
+    fill(view, head, summary, h('div', { class: 'su-people' }, cards, removed));
+  }
+
+  // ======================================================================
+  // Capacity planning: planned work against what the team usually finishes
+  // ======================================================================
+  let planPreview = null;
+
+  // Last 5 finished sprints: what got done in each, and by whom. Work counts
+  // only if it was done by the time the sprint closed.
+  function teamHistory() {
+    if (state.history && state.history.boardId === state.boardId) return state.history.promise;
+    const closed = state.sprints.filter((sp) => sp.state === 'closed')
+      .sort((a, b) => (b.completeDate || b.end || 0) - (a.completeDate || a.end || 0)).slice(0, 5);
+    const boardId = state.boardId, config = state.config, source = state.source;
+    const promise = Promise.all(closed.map(async (sp) => ({ sprint: sp, issues: await source.historyIssues(boardId, sp.id, config) })))
+      .then((list) => list.reverse().map(({ sprint, issues }) => {
+        const cutoff = sprint.completeDate || sprint.end;
+        const done = issues.filter((i) => i.category === 'done' && (!i.resolved || !cutoff || i.resolved <= new Date(cutoff.getTime() + 12 * 3600e3)));
+        const people = new Map();
+        for (const i of done) {
+          const id = i.assignee ? i.assignee.id : '__none';
+          if (!people.has(id)) people.set(id, { name: i.assignee ? i.assignee.name : 'Unassigned', points: 0, count: 0 });
+          people.get(id).points += i.estimate || 0;
+          people.get(id).count += 1;
+        }
+        return { sprint, points: done.reduce((t, i) => t + (i.estimate || 0), 0), count: done.length, people };
+      }));
+    state.history = { boardId, promise };
+    promise.catch(() => { if (state.history && state.history.promise === promise) state.history = null; });
+    return promise;
+  }
+  function planTargetIssues(id) {
+    if (state.data.sprint.id === id) return Promise.resolve(state.data.issues);
+    if (state.planCache && state.planCache.sprintId === id && state.planCache.boardId === state.boardId) return state.planCache.promise;
+    const promise = state.source.loadSprint(state.boardId, id, state.config).then((r) => r.issues);
+    state.planCache = { sprintId: id, boardId: state.boardId, promise };
+    promise.catch(() => { state.planCache = null; });
+    return promise;
+  }
+
+  function renderPlan() {
+    const el = $('planPanel');
+    planPreview = null;
+    const sp = state.data.sprint;
+    const planning = isBacklog() || sp.state === 'future';
+    el.hidden = !planning;
+    if (!planning) return;
+    const futures = state.sprints.filter((x) => x.state === 'future').sort((a, b) => (a.start || 0) - (b.start || 0));
+    const target = sp.state === 'future' ? sp : futures.find((f) => f.id === state.planTargetId) || futures[0];
+    const shell = (title, ...body) => fill(el, h('div', { class: 'panel' }, h('div', { class: 'panel-head' }, h('h2', null, title)), ...body));
+    if (!target) { shell('Plan the next sprint', h('p', { class: 'empty-note' }, 'There is no upcoming sprint on this board. Create one in Jira to plan it here.')); return; }
+    state.planTargetId = target.id;
+    const token = renderPlan.token = {};
+    if (!el.querySelector('.plan-grid')) shell(`Plan ${target.name}`, h('p', { class: 'empty-note' }, 'Loading team history…'));
+    Promise.all([teamHistory(), planTargetIssues(target.id)]).then(([history, targetIssues]) => {
+      if (renderPlan.token !== token) return;
+      const draw = () => drawPlan(el, target, futures, history, targetIssues);
+      planPreview = isBacklog() ? draw : null;
+      draw();
+    }).catch((err) => {
+      if (renderPlan.token === token) shell(`Plan ${target.name}`, h('p', { class: 'form-error' }, icon('stop', 'tone-critical'), h('span', null, `Couldn't load team history: ${err.message}`)));
+    });
+  }
+
+  // How the team plans: each person takes `pointsPerDay` story points per working
+  // day (1 point = 1 day, so 10 points in a two-week sprint), less days off.
+  // Boards without story points fall back to what each person usually finished.
+  function drawPlan(el, target, futures, history, targetIssues) {
+    const rule = usesEstimates() && state.config.estimate.unit === 'pts';
+    const ppd = Number(prefs.pointsPerDay) > 0 ? Number(prefs.pointsPerDay) : 1;
+    const isPts = rule || metric() === 'points';
+    const val = (i) => (isPts ? i.estimate || 0 : 1);
+    const per = (x) => (isPts ? x.points : x.count);
+    const sum = (list) => list.reduce((t, i) => t + val(i), 0);
+    const unit = (v) => (isPts ? `${fmtNum(v)} ${state.config.estimate.unit === 'h' ? 'h' : 'pts'}` : `${fmtNum(v)} ${v === 1 ? 'issue' : 'issues'}`);
+    const r1 = (v) => Math.round(v * 10) / 10;
+    const days = target.start && target.end ? workingDays(target.start, target.end).length || 10 : 10;
+    const offKey = `sprintboard:daysoff:${state.boardId}:${target.id}`;
+    const off = store.get('localStorage', offKey, {});
+    const n = history.length;
+    const velocities = history.map(per);
+    const avg = n ? velocities.reduce((a, b) => a + b, 0) / n : null;
+    const redraw = () => drawPlan(el, target, futures, history, targetIssues);
+
+    const rows = new Map();
+    const row = (p) => {
+      const id = p ? p.id : '__none';
+      if (!rows.has(id)) rows.set(id, { id, name: p ? p.name : 'Unassigned', hist: 0, planned: 0, sel: 0 });
+      return rows.get(id);
+    };
+    for (const hs of history) for (const [id, p] of hs.people) if (id !== '__none') row({ id, name: p.name }).hist += per(p) / n;
+    for (const i of targetIssues) row(i.assignee).planned += val(i);
+    const selected = isBacklog() ? state.data.issues.filter((i) => state.selected.has(i.key)) : [];
+    for (const i of selected) row(i.assignee).sel += val(i);
+    const people = [...rows.values()].filter((r) => r.id !== '__none').sort((a, b) => a.name.localeCompare(b.name));
+    const unassigned = rows.get('__none');
+    for (const r of people) {
+      r.off = clamp(Number(off[r.id]) || 0, 0, days);
+      r.factor = (days - r.off) / days;
+      r.cap = rule ? (days - r.off) * ppd : r.hist * r.factor;
+      r.hasCap = rule || r.hist > 0;
+    }
+    const histSum = people.reduce((t, r) => t + r.hist, 0);
+    const teamCap = rule ? people.reduce((t, r) => t + r.cap, 0)
+      : avg == null ? null : histSum > 0 ? avg * people.reduce((t, r) => t + r.hist * r.factor, 0) / histSum : avg;
+    const totalOff = people.reduce((t, r) => t + r.off, 0);
+    const planned = sum(targetIssues);
+    const selTotal = sum(selected);
+    const unestimated = isPts && usesEstimates() ? targetIssues.filter((i) => i.estimate == null).length : 0;
+    const capShown = teamCap == null ? null : rule ? r1(teamCap) : Math.round(teamCap);
+    const capWord = rule ? 'capacity' : 'what the team usually finishes';
+
+    // ----- Left: team total against capacity
+    const scale = Math.max(planned + selTotal, teamCap || 0, 1) * 1.08;
+    const pct = (v) => `${(v / scale) * 100}%`;
+    const within = teamCap == null ? planned : Math.min(planned, teamCap);
+    const over = teamCap == null ? 0 : Math.max(0, planned - teamCap);
+    const bar = h('div', { class: 'cap-bar', role: 'img',
+      'aria-label': `${unit(r1(planned))} planned` + (capShown != null ? `, ${capWord} ${unit(capShown)}` : '') + (selTotal ? `, ${unit(r1(selTotal))} selected in the backlog` : '') },
+      within > 0 ? h('div', { class: 'cap-seg', style: `left:0;width:${pct(within)};background:var(--series-1)` }) : null,
+      over > 0 ? h('div', { class: 'cap-seg', style: `left:${pct(within)};width:${pct(over)};background:var(--serious)` }) : null,
+      selTotal > 0 ? h('div', { class: 'cap-seg sel', style: `left:${pct(planned)};width:${pct(selTotal)}` }) : null,
+      teamCap != null ? h('div', { class: 'cap-mark', style: `left:${pct(teamCap)}` }, h('span', null, rule ? 'Capacity' : 'Usual')) : null);
+    const legend = h('div', { class: 'legend' },
+      h('span', { class: 'key' }, swatch('var(--series-1)'), 'Planned'),
+      over > 0 ? h('span', { class: 'key' }, swatch('var(--serious)'), rule ? 'Over capacity' : 'Over usual') : null,
+      selTotal > 0 ? h('span', { class: 'key' }, h('span', { class: 'swatch', style: 'background:repeating-linear-gradient(45deg,var(--series-1) 0 2px,transparent 2px 4px);box-shadow:inset 0 0 0 1px var(--series-1)' }), 'Selected in the backlog') : null,
+      teamCap != null ? h('span', { class: 'key' }, h('span', { class: 'swatch', style: 'width:2px;background:var(--ink)' }), rule ? 'Team capacity' : 'What the team usually finishes') : null);
+
+    let verdict;
+    if (teamCap == null) {
+      verdict = h('p', { class: 'plan-verdict' }, icon('alert', 'tone-muted'), h('span', null, 'No finished sprints yet, so there is no history to plan against.'));
+    } else {
+      const room = teamCap - planned;
+      verdict = room >= 0.5
+        ? h('p', { class: 'plan-verdict' }, icon('check', 'tone-good'), h('span', null, `Room for ${rule ? '' : 'about '}${unit(rule ? r1(room) : Math.round(room))} more.`))
+        : room > -0.5
+          ? h('p', { class: 'plan-verdict' }, icon('check', 'tone-good'), h('span', null, rule ? 'Exactly at capacity.' : 'Right at what the team usually finishes.'))
+          : h('p', { class: 'plan-verdict' }, icon('alert', 'tone-serious'), h('span', null, rule ? `${unit(r1(-room))} over capacity.` : `About ${unit(Math.round(-room))} more than the team usually finishes.`));
+    }
+    const preview = selTotal > 0 ? h('p', { class: 'plan-verdict' }, icon('plus', 'tone-muted'), h('span', null,
+      `With the ${plural(selected.length, 'selected issue', 'selected issues')} (${unit(r1(selTotal))}): ${capShown != null ? `${fmtNum(r1(planned + selTotal))} of ${rule ? '' : '~'}${unit(capShown)}` : unit(r1(planned + selTotal))}.`)) : null;
+    // Reality check: capacity by the rule, against what recent sprints actually finished.
+    const load = planned + selTotal;
+    const stretch = rule && avg != null && load > avg * 1.1
+      ? h('p', { class: 'plan-verdict' }, icon('alert', 'tone-warning'), h('span', null,
+        `Recent sprints finished ${unit(r1(avg))} on average, so ${unit(r1(load))} is more than the team has been finishing.`))
+      : null;
+
+    // Finished per sprint, oldest to newest, with the average as a dashed line.
+    let velocity = null;
+    if (n) {
+      const W = 320, H = 92, top = 14, bottom = 22, maxV = Math.max(...velocities, 1);
+      const bw = Math.min(40, (W - 8 * (n - 1)) / n);
+      const Y = (v) => top + (H - top - bottom) * (1 - v / maxV);
+      const svg = s('svg', { viewBox: `0 0 ${W} ${H}`, height: H, role: 'img',
+        'aria-label': `Finished per sprint: ${history.map((hs, k) => `${hs.sprint.name} ${unit(r1(velocities[k]))}`).join(', ')}. Average ${unit(r1(avg))}.` });
+      const endX = n * (bw + 8) - 8;
+      history.forEach((hs, k) => {
+        const x = k * (bw + 8);
+        const v = velocities[k];
+        svg.append(s('rect', { x, y: Y(v), width: bw, height: Math.max(1, H - bottom - Y(v)), rx: 3, fill: 'var(--st-done)' }, s('title', null, `${hs.sprint.name}: ${unit(r1(v))}`)));
+        // Value inside the bar (above it when the bar is too short), clear of the average line.
+        const inside = H - bottom - Y(v) >= 18;
+        svg.append(s('text', { x: x + bw / 2, y: inside ? Y(v) + 13 : Y(v) - 4, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 700,
+          fill: inside ? 'var(--card)' : 'var(--ink-2)', 'font-variant-numeric': 'tabular-nums' }, fmtNum(r1(v))));
+        const num = hs.sprint.name.match(/(\d+)\s*$/);
+        svg.append(s('text', { x: x + bw / 2, y: H - 6, 'text-anchor': 'middle', class: 'axis-text' }, num ? num[1] : hs.sprint.name.slice(0, 6)));
+      });
+      svg.append(s('line', { x1: -2, x2: endX + 2, y1: Y(avg), y2: Y(avg), stroke: 'var(--ink)', 'stroke-width': 1.5, 'stroke-dasharray': '4 3' }));
+      svg.append(s('text', { x: endX + 6, y: Y(avg) + 4, class: 'axis-text' }, `avg ${fmtNum(r1(avg))}`));
+      velocity = h('div', { class: 'velocity' }, h('div', { class: 'links-label', style: 'margin:0 0 6px' }, 'Finished in recent sprints'), svg);
+    }
+
+    // The rule itself, editable: "Each person: [1] point per working day".
+    let ruleNote = null;
+    if (rule) {
+      const ppdInput = h('input', { class: 'input', type: 'number', min: 0.25, step: 0.25, inputmode: 'decimal', value: String(ppd),
+        style: 'width:58px;padding:2px 6px;margin:0 4px;text-align:right;display:inline-block', 'aria-label': 'Story points per person per working day' });
+      ppdInput.addEventListener('change', () => {
+        const v = Number(ppdInput.value);
+        if (v > 0) { prefs.pointsPerDay = v; savePrefs(); }
+        redraw();
+      });
+      ruleNote = h('p', { class: 'plan-note', style: 'line-height:2' },
+        'Each person', ppdInput, `${ppd === 1 ? 'point' : 'points'} per working day, so ${unit(r1(days * ppd))} in ${plural(days, 'working day', 'working days')}` +
+        (totalOff ? `, less ${plural(totalOff, 'day', 'days')} off.` : '.'));
+    }
+
+    const left = h('div', null,
+      h('p', { class: 'plan-big' }, capShown != null ? `${fmtNum(r1(planned))} of ${rule ? '' : '~'}${unit(capShown)} planned` : `${unit(r1(planned))} planned`),
+      bar, legend, verdict, preview, stretch, ruleNote,
+      !rule && n ? h('p', { class: 'plan-note' }, `"Usual" is ${n === 1 ? 'what was finished in the last sprint' : `the average finished in the last ${n} sprints`}` +
+        (totalOff ? `, adjusted for ${plural(totalOff, 'day', 'days')} off` : '') + '.') : null,
+      unestimated ? h('p', { class: 'plan-note' }, `${plural(unestimated, 'issue', 'issues')} in ${target.name} ${unestimated === 1 ? 'has' : 'have'} no estimate yet.`) : null,
+      velocity);
+
+    // ----- Right: per person
+    const fitCell = (r) => {
+      if (!r.hasCap) return h('span', { class: 'muted' }, r.planned + r.sel > 0 ? 'No history yet' : '–');
+      const loadR = r.planned + r.sel;
+      const diff = loadR - r.cap;
+      const w = Math.min(100, (loadR / Math.max(r.cap, 0.01)) * 100);
+      return h('span', { class: 'fit' },
+        h('span', { class: 'fit-bar', 'aria-hidden': 'true' }, h('span', { style: `width:${w}%;background:${diff > 0.25 ? 'var(--serious)' : 'var(--series-1)'}` })),
+        diff > 0.25 ? h('span', null, icon('alert', 'tone-serious'), ` ${fmtNum(r1(diff))} over`) : h('span', { class: 'muted' }, `${fmtNum(r1(Math.max(0, -diff)))} left`));
+    };
+    const offInput = (r) => {
+      const input = h('input', { class: 'input', type: 'number', min: 0, max: days, step: 0.5, inputmode: 'decimal', value: r.off ? String(r.off) : '',
+        placeholder: '0', 'aria-label': `Days off for ${r.name} in ${target.name}`, 'data-person': r.id });
+      input.addEventListener('change', () => {
+        const next = { ...store.get('localStorage', offKey, {}) };
+        const v = clamp(Number(input.value) || 0, 0, days);
+        if (v) next[r.id] = v; else delete next[r.id];
+        store.set('localStorage', offKey, next);
+        redraw();
+        const again = el.querySelector(`input[data-person="${CSS.escape(r.id)}"]`);
+        if (again) again.focus();
+      });
+      return input;
+    };
+    const plannedCell = (r) => [fmtNum(r1(r.planned)), r.sel ? h('span', { class: 'muted' }, ` +${fmtNum(r1(r.sel))}`) : null];
+    const histCell = (r) => (r.hist > 0 ? fmtNum(r1(r.hist)) : '–');
+    const head = rule
+      ? ['Person', 'Days off', 'Capacity', 'Planned', 'Fit', 'Recent average']
+      : ['Person', 'Usually finishes', 'Days off', 'Capacity', 'Planned', 'Fit'];
+    const right = h('div', null,
+      h('div', { class: 'plan-scroll' }, h('table', { class: 'plan-table' },
+        h('thead', null, h('tr', null, head.map((t) => h('th', { class: t === 'Person' || t === 'Fit' ? null : 'r' }, t)))),
+        h('tbody', null,
+          people.map((r) => {
+            const who = h('td', null, h('span', { class: 'who' }, h('span', { class: 'avatar sm' }, initials(r.name)), h('span', null, r.name)));
+            const cap = h('td', { class: 'r' }, r.hasCap ? fmtNum(r1(r.cap)) : '–');
+            return rule
+              ? h('tr', null, who, h('td', { class: 'r' }, offInput(r)), cap, h('td', { class: 'r' }, plannedCell(r)), h('td', null, fitCell(r)), h('td', { class: 'r muted' }, histCell(r)))
+              : h('tr', null, who, h('td', { class: 'r' }, histCell(r)), h('td', { class: 'r' }, offInput(r)), cap, h('td', { class: 'r' }, plannedCell(r)), h('td', null, fitCell(r)));
+          }),
+          unassigned && unassigned.planned + unassigned.sel > 0 ? h('tr', null,
+            h('td', null, h('span', { class: 'who' }, h('span', { class: 'avatar sm none' }, icon('user')), h('span', null, 'Unassigned'))),
+            ...(rule ? [h('td'), h('td', { class: 'r' }, '–'), h('td', { class: 'r' }, plannedCell(unassigned))]
+              : [h('td', { class: 'r' }, '–'), h('td'), h('td', { class: 'r' }, '–'), h('td', { class: 'r' }, plannedCell(unassigned))]),
+            h('td', { colspan: rule ? 2 : 1 }, h('span', { class: 'muted' }, 'Assign before the sprint starts'))) : null))),
+      h('p', { class: 'plan-note' }, rule
+        ? `Numbers are story points. Set days off to ${days} for anyone not taking stories this sprint. Recent average is what each person finished in the last ${plural(n || 0, 'sprint', 'sprints')}. Days off are saved in this browser only.`
+        : `Numbers are ${isPts ? 'hours' : 'issues'}. Capacity is what each person usually finishes, reduced for days off out of ${days} working days. Days off are saved in this browser only.`));
+
+    const pickTarget = isBacklog() && futures.length > 1 ? h('select', { class: 'select', 'aria-label': 'Sprint to plan',
+      onchange: (e) => { state.planTargetId = Number(e.target.value); renderPlan(); } },
+      futures.map((f) => h('option', { value: String(f.id), selected: f.id === target.id }, f.name))) : null;
+    const when = target.start && target.end
+      ? `${fmtDay.format(target.start)} – ${fmtDay.format(target.end)}, ${days} working days`
+      : `No dates in Jira yet, so this assumes ${days} working days`;
+    fill(el, h('div', { class: 'panel' },
+      h('div', { class: 'panel-head' }, h('h2', null, `Plan ${target.name}`), pickTarget),
+      h('p', { class: 'sub' }, when),
+      h('div', { class: 'plan-grid' }, left, right)));
   }
 
   // ======================================================================
@@ -4015,12 +4650,13 @@
   function renderAll() {
     state.data.issues.forEach((i) => epicColor(i.epic));
     renderHero();
+    renderPlan();
     renderFilters();
     renderBelowFilters();
   }
   function renderMetricToggle() {
     const toggle = $('metricToggle');
-    toggle.hidden = !usesEstimates() || currentScreen !== 'sprint';
+    toggle.hidden = !usesEstimates() || !(currentScreen === 'sprint' || currentScreen === 'standup');
     for (const b of toggle.querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.metric === metric()));
   }
 
@@ -4031,39 +4667,41 @@
   }
   let currentScreen = null;
   function showScreen(name, note) {
-    // The sprint tab remembers its screen so switching back from My work restores it.
+    // The sprint tab remembers its screen so switching back from another tab restores it.
     if (name === 'sprint' || name === 'note') {
       state.sprintScreen = { name, note };
-      if (state.source && prefs.tab === 'mine') name = 'mine';
+      if (state.source && (prefs.tab === 'mine' || prefs.tab === 'standup')) name = prefs.tab;
     }
     currentScreen = name;
     $('connect').hidden = name !== 'connect';
     $('sprintView').hidden = name !== 'sprint';
     $('pageNote').hidden = name !== 'note';
     $('mineView').hidden = name !== 'mine';
+    $('standupView').hidden = name !== 'standup';
     if (name === 'note' && note) $('pageNote').textContent = note;
     const connected = !!state.source && name !== 'connect';
     $('tabs').hidden = !connected;
     for (const t of $('tabs').querySelectorAll('.tab')) {
-      if (t.dataset.tab === (name === 'mine' ? 'mine' : 'sprint')) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current');
+      if (t.dataset.tab === (name === 'mine' || name === 'standup' ? name : 'sprint')) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current');
     }
-    $('pickers').hidden = !(name === 'sprint' || (name === 'note' && connected && state.boards.length));
-    $('metricToggle').hidden = name !== 'sprint' || !usesEstimates();
-    $('refreshBtn').hidden = !(name === 'sprint' || name === 'mine');
+    $('pickers').hidden = !(name === 'sprint' || name === 'standup' || (name === 'note' && connected && state.boards.length));
+    $('metricToggle').hidden = !(name === 'sprint' || name === 'standup') || !usesEstimates();
+    $('refreshBtn').hidden = !(name === 'sprint' || name === 'mine' || name === 'standup');
     $('snapshotBtn').hidden = name !== 'sprint' || isBacklog();
     $('createBtn').hidden = !connected || !state.boardId || !state.source.createIssue;
     $('connectionBtn').hidden = name === 'connect';
     $('sourceTag').hidden = !connected;
     if (name === 'mine') loadMine();
+    if (name === 'standup') loadStandup();
   }
   function setTab(tab) {
-    if (prefs.tab === tab && currentScreen === (tab === 'mine' ? 'mine' : state.sprintScreen.name)) return;
+    if (prefs.tab === tab && currentScreen === (tab === 'sprint' ? state.sprintScreen.name : tab)) return;
     prefs.tab = tab;
     savePrefs();
     closeDrawer();
     hideTooltip();
-    if (tab === 'mine') showScreen('mine');
-    else showScreen(state.sprintScreen.name, state.sprintScreen.note);
+    if (tab === 'sprint') showScreen(state.sprintScreen.name, state.sprintScreen.note);
+    else showScreen(tab);
     if (tab === 'sprint' && state.data && currentScreen === 'sprint') renderBurndown(filteredIssues());
   }
 
@@ -4107,6 +4745,7 @@
     const seq = ++state.loadSeq;
     state.boardId = boardId;
     state.createMeta = null;
+    state.history = null;
     setBusy('Loading board…');
     const [config, sprints] = await Promise.all([state.source.boardConfig(boardId), state.source.listSprints(boardId)]);
     if (seq !== state.loadSeq) return;
@@ -4140,6 +4779,8 @@
       }
       const keepFilters = state.data && state.data.sprint.id === sprintId;
       state.data = { sprint, ...result, byKey: new Map(result.issues.map((i) => [i.key, i])) };
+      state.standup = null;
+      state.planCache = null;
       if (!keepFilters) {
         state.filters = { q: '', people: new Set(), type: '', epic: '', attention: false };
         state.selected = new Set();
@@ -4248,6 +4889,7 @@
   $('refreshBtn').addEventListener('click', async () => {
     if (!state.source) return;
     if (currentScreen === 'mine') return loadMine(true);
+    state.history = null;
     try {
       const sprints = await state.source.listSprints(state.boardId);
       state.sprints = sprints;
@@ -4268,6 +4910,7 @@
     savePrefs();
     renderMetricToggle();
     if (state.data) renderAll();
+    if (currentScreen === 'standup') renderStandup();
   });
 
   // Re-draw the burndown when its panel changes width.
