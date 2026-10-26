@@ -64,7 +64,7 @@
     font: 15px/1.5 var(--font-ui);
     -webkit-font-smoothing: antialiased;
   }
-  button, input, select { font: inherit; color: inherit; }
+  button, input, select, textarea { font: inherit; color: inherit; }
   :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
   [hidden] { display: none !important; }
   .icon { width: 16px; height: 16px; flex: none; vertical-align: -3px; }
@@ -296,7 +296,7 @@
   .meta-bit { display: inline-flex; align-items: center; gap: 4px; }
 
   /* List view */
-  .table-wrap { overflow-x: auto; background: var(--card); border: 1px solid var(--line); border-radius: 14px; }
+  .table-wrap { position: relative; overflow-x: auto; background: var(--card); border: 1px solid var(--line); border-radius: 14px; }
   table.issues { width: 100%; border-collapse: collapse; font-size: 14px; }
   table.issues th, table.issues td { padding: 9px 12px; border-bottom: 1px solid var(--hair); text-align: left; vertical-align: middle; }
   table.issues th { position: sticky; top: 0; background: var(--raised); font-size: 13px; color: var(--ink-2); white-space: nowrap; }
@@ -329,6 +329,29 @@
   .subtasks li { display: flex; gap: 8px; align-items: center; }
   .subtasks li.done span:last-child { color: var(--muted); text-decoration: line-through; }
 
+  /* Editing in the drawer: controls look like text until hovered or focused. */
+  .title-edit {
+    display: block; width: calc(100% + 9px); margin: 8px 0 4px -9px; padding: 4px 8px; resize: none; overflow: hidden;
+    font: 650 24px/1.2 var(--font-display); letter-spacing: -0.015em; color: var(--ink);
+    border: 1px solid transparent; border-radius: 8px; background: transparent;
+  }
+  .title-edit:hover, .desc-edit:hover { border-color: var(--line); }
+  .title-edit:focus, .desc-edit:focus { border-color: var(--focus); background: var(--card); outline: none; }
+  .quiet { border-color: transparent; background-color: transparent; padding-top: 4px; padding-bottom: 4px; margin-left: -9px; padding-left: 8px; }
+  .quiet:hover { border-color: var(--line); background-color: var(--card); }
+  .quiet:focus { border-color: var(--focus); background-color: var(--card); }
+  input.quiet { width: 100%; max-width: 240px; padding-right: 8px; border-radius: 8px; border-width: 1px; border-style: solid; }
+  input.quiet.num-edit { max-width: 110px; }
+  .status-select { font-weight: 700; padding-top: 4px; padding-bottom: 4px; border-radius: 999px; }
+  .save-state { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--muted); }
+  .save-state:empty { display: none; }
+  .save-state.ok .icon { color: var(--good); }
+  .save-state.err { color: var(--critical); }
+  .edit-note { font-size: 13px; color: var(--muted); margin: 0 0 14px; }
+  .desc-edit { width: 100%; min-height: 150px; line-height: 1.6; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--hair); background: var(--raised); resize: vertical; }
+  .desc-actions { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-top: 8px; }
+  .desc-actions small { color: var(--muted); font-size: 13px; }
+
   /* ---------- Tooltip ---------- */
   .tooltip {
     position: fixed; z-index: 60; pointer-events: none; min-width: 150px; max-width: 280px;
@@ -340,14 +363,134 @@
   .tooltip .tt-row strong { font-variant-numeric: tabular-nums; }
   .tooltip .tt-row span:last-child { color: var(--ink-2); }
 
+  /* ---------- Tabs ---------- */
+  .tabs { display: flex; gap: 2px; align-self: stretch; margin: -10px 0; }
+  .tab {
+    display: inline-flex; align-items: center; gap: 7px; padding: 0 12px; border: 0; background: none; cursor: pointer;
+    color: var(--ink-2); font-weight: 700; box-shadow: inset 0 -3px 0 transparent;
+  }
+  .tab:hover { color: var(--ink); }
+  .tab[aria-current="page"] { color: var(--ink); box-shadow: inset 0 -3px 0 var(--ink); }
+  .count { font-size: 12px; min-width: 22px; padding: 0 7px; border-radius: 999px; background: var(--raised); border: 1px solid var(--hair); font-variant-numeric: tabular-nums; text-align: center; }
+
+  /* ---------- Dependencies ---------- */
+  .dep-line { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-2); min-width: 0; }
+  .dep-line > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dep-line strong { color: var(--ink); }
+  .dep-summary { display: flex; flex-wrap: wrap; gap: 6px 22px; font-size: 14px; color: var(--ink-2); margin: 0 0 12px; }
+  .dep-summary strong { color: var(--ink); }
+  .depmap-scroll { overflow-x: auto; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+  .depmap { position: relative; }
+  .depmap svg.edges { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+  .edge { transition: opacity .15s; }
+  .dep-node {
+    position: absolute; width: 236px; height: 84px; display: grid; grid-template-rows: auto 1fr; gap: 4px;
+    padding: 9px 11px; text-align: left; background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    cursor: pointer; transition: opacity .15s; color: inherit; text-decoration: none; overflow: hidden;
+  }
+  .dep-node:hover { border-color: var(--ink-2); }
+  .dep-node.external { background: var(--raised); border-style: dashed; }
+  div.dep-node.external { cursor: default; }
+  .dep-node.waiting { border-left: 4px solid var(--critical); padding-left: 8px; }
+  .dep-node .card-top { gap: 6px; min-width: 0; }
+  .dep-node .node-status { margin-left: auto; display: inline-flex; align-items: center; gap: 5px; min-width: 0; color: var(--ink-2); }
+  .dep-node .node-status span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dep-node .node-summary { font-size: 14px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .depmap.focus .dep-node:not(.lit) { opacity: .3; }
+  .depmap.focus .edge:not(.lit) { opacity: .12; }
+  .links { list-style: none; padding: 0; margin: 0 0 6px; display: grid; gap: 2px; font-size: 14px; }
+  .links-label { font-size: 13px; color: var(--muted); font-weight: 700; margin: 10px 0 4px; }
+  .link-item { display: grid; grid-template-columns: auto auto 1fr; gap: 8px; align-items: center; padding: 5px 6px; margin: 0 -6px; border-radius: 6px; border: 0; background: none; text-align: left; width: calc(100% + 12px); color: inherit; text-decoration: none; }
+  button.link-item, a.link-item { cursor: pointer; }
+  button.link-item:hover, a.link-item:hover { background: var(--raised); }
+  .link-item .what { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .link-item .st { color: var(--muted); font-size: 13px; white-space: nowrap; }
+
+  /* ---------- Create form ---------- */
+  .create-form { display: grid; gap: 16px; margin-top: 8px; }
+  .create-form .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .create-form .row3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .create-form fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+  .create-form legend { font-weight: 700; font-size: 14px; padding: 0; margin-bottom: 6px; }
+  .choice { display: inline-flex; flex-wrap: wrap; gap: 2px; border: 1px solid var(--line); border-radius: 8px; padding: 2px; background: var(--card); max-width: 100%; }
+  .choice label { position: relative; }
+  .choice input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+  .choice span { display: block; padding: 6px 14px; border-radius: 6px; color: var(--ink-2); }
+  .choice input:checked + span { background: var(--ink); color: var(--card); font-weight: 700; }
+  .choice input:focus-visible + span { outline: 2px solid var(--focus); outline-offset: 1px; }
+  .choice span { display: inline-flex; align-items: center; gap: 6px; }
+  .choice .tick { display: none; }
+  .choice input:checked + span .tick { display: inline; color: var(--card); }
+  .platform-row { display: flex; align-items: center; gap: 8px 14px; flex-wrap: wrap; margin-bottom: 6px; }
+  .platforms small { font-size: 13px; }
+  .clone-from { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 8px; background: var(--raised); border: 1px solid var(--hair); font-size: 14px; }
+  .clone-from .what { min-width: 0; overflow-wrap: anywhere; }
+  .finder { display: flex; gap: 8px; }
+  .finder .input { flex: 1; min-width: 0; }
+  .finds { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 2px; max-height: 260px; overflow: auto; }
+  .finds .link-item .where { color: var(--muted); font-size: 13px; white-space: nowrap; }
+  .finds .link-item { grid-template-columns: auto 1fr auto; }
+  .preview { font-size: 14px; background: var(--raised); border: 1px solid var(--hair); border-radius: 8px; padding: 8px 12px; margin-top: -6px; overflow-wrap: anywhere; }
+  .preview .muted { font-size: 13px; }
+  .preview ul { margin: 2px 0 0; padding-left: 18px; }
+  textarea.input { min-height: 110px; resize: vertical; line-height: 1.5; }
+  .create-form .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .req { color: var(--muted); font-weight: 400; }
+
+  /* ---------- My work ---------- */
+  .mine-head { padding: 36px 0 18px; }
+  .mine-head h1 { font: 700 clamp(28px, 3.2vw, 42px)/1.06 var(--font-display); letter-spacing: -0.025em; margin: 0 0 10px; }
+  .mine-head p { color: var(--ink-2); margin: 0; max-width: 70ch; }
+  .mine-tools { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+  .mine-group { margin-top: 22px; }
+  .mine-group-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin: 0 0 8px; }
+  .mine-group-head h2 { font: 650 19px/1.2 var(--font-display); margin: 0; letter-spacing: -0.01em; }
+  .mine-group-head .muted { font-size: 14px; }
+  .here-tag { font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--accent); color: #14202b; font-weight: 700; }
+  table.mine-table { table-layout: fixed; min-width: 820px; }
+  table.mine-table td { overflow-wrap: anywhere; }
+  .sprint-tag { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 13px; color: var(--ink-2); }
+
+  /* ---------- Backlog ---------- */
+  .epic-bar { display: flex; gap: 2px; height: 22px; border-radius: 4px; overflow: hidden; max-width: 1180px; }
+  .epic-bar .seg { transition: none; }
+  .move-bar {
+    position: sticky; bottom: 12px; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px;
+    margin-top: 10px; padding: 10px 14px; border-radius: 10px; background: var(--card); border: 1px solid var(--ink);
+    box-shadow: 0 8px 24px rgba(10, 16, 22, .14); font-size: 14px;
+  }
+  .move-to { display: inline-flex; align-items: center; gap: 8px; }
+  .bar-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; flex: 1 1 100%; }
+  .bulk-row { gap: 8px 10px; padding-top: 10px; border-top: 1px solid var(--hair); }
+  .bulk-row .select { padding-top: 5px; padding-bottom: 5px; max-width: 220px; }
+  .bar-label { font-weight: 700; }
+  .points-in { width: 150px; padding-top: 5px; padding-bottom: 5px; }
+  .move-inline { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .move-inline .select { padding-top: 4px; padding-bottom: 4px; font-size: 14px; }
+  .move-inline .btn { padding: 4px 10px; font-size: 14px; }
+  table.issues td.pick, table.issues th.pick { width: 40px; padding-right: 0; }
+  .pick input { width: 16px; height: 16px; accent-color: var(--ink); cursor: pointer; vertical-align: middle; }
+  .insights.no-burndown { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+
+  /* ---------- Toast ---------- */
+  .toast {
+    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 70; width: max-content; max-width: min(640px, calc(100vw - 32px));
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 12px 14px 12px 16px; border-radius: 12px;
+    background: var(--ink); color: var(--card); box-shadow: 0 10px 30px rgba(10, 16, 22, .25); font-size: 15px;
+  }
+  .toast .btn { background: transparent; color: var(--card); border-color: color-mix(in srgb, var(--card) 40%, transparent); }
+  .toast .btn:hover { border-color: var(--card); }
+  .toast ul { margin: 4px 0 0; padding-left: 18px; font-size: 14px; }
+
   @media (max-width: 1180px) {
     .insights { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
     .insights .panel.attention { grid-column: 1 / -1; }
+    .insights.no-burndown .panel.attention { grid-column: auto; }
   }
   @media (max-width: 760px) {
     .topbar { padding: 10px 16px; position: static; }
     main { padding: 0 16px 48px; }
-    .insights { grid-template-columns: minmax(0, 1fr); }
+    .insights, .insights.no-burndown { grid-template-columns: minmax(0, 1fr); }
     .track { grid-template-columns: minmax(0, 1fr); }
     .track-labels { display: none; }
     .track-label { display: none; }
@@ -360,6 +503,13 @@
     .filters { position: static; }
     .facts { grid-template-columns: 1fr; gap: 2px; }
     .facts dd { margin-bottom: 8px; }
+    .tabs { margin: 0; order: 5; width: 100%; }
+    .tab { padding: 8px 12px; }
+    .create-form .row2, .create-form .row3 { grid-template-columns: 1fr; }
+    .bulk-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .bulk-row .bar-label, .bulk-row > span:last-child { grid-column: 1 / -1; }
+    .bulk-row .select, .bulk-row .points-in, .bulk-row .btn { width: 100%; max-width: none; }
+    .bulk-row .btn { justify-content: center; }
   }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { transition: none !important; animation: none !important; }
@@ -369,6 +519,10 @@
 <body>
 <header class="topbar" id="topbar">
   <span class="brand">Sprint board</span>
+  <nav class="tabs" id="tabs" aria-label="Views" hidden>
+    <button type="button" class="tab" data-tab="sprint">Sprint</button>
+    <button type="button" class="tab" data-tab="mine">My work <span class="count" id="mineCount" hidden></span></button>
+  </nav>
   <div class="pickers" id="pickers" hidden>
     <label>Board <select class="select" id="boardSelect"></select></label>
     <label>Sprint <select class="select" id="sprintSelect"></select></label>
@@ -381,6 +535,7 @@
     </div>
     <span class="source-tag" id="sourceTag" hidden></span>
     <button class="btn" type="button" id="refreshBtn" hidden></button>
+    <button class="btn primary" type="button" id="createBtn" hidden></button>
     <button class="btn" type="button" id="connectionBtn" hidden>Connection</button>
   </div>
 </header>
@@ -388,7 +543,7 @@
 <main>
   <section class="connect" id="connect" hidden>
     <h1>Connect to Jira</h1>
-    <p>See a sprint's goal, progress, team load and blockers on one page. The board only reads from Jira and never changes anything.</p>
+    <p>See a sprint's goal, progress, dependencies and blockers on one page, and everything assigned to you across boards. The board changes Jira only when you create an issue.</p>
     <form id="connectForm" novalidate>
       <div class="notice" id="fileNotice" hidden>
         To connect to Jira, start the local server in this folder with <code>python3 server.py</code>, then open
@@ -432,11 +587,14 @@
     </section>
     <section class="board-section" id="boardSection"></section>
   </div>
+
+  <div id="mineView" hidden></div>
 </main>
 
 <div class="scrim" id="scrim" hidden></div>
 <aside class="drawer closed" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitle" hidden></aside>
 <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
 <script>
 (() => {
@@ -507,6 +665,10 @@
     chevron: [['path', { d: 'M4 6l4 4 4-4', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.8, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }]],
     sort: [['path', { d: 'M5 6.5l3-3 3 3M5 9.5l3 3 3-3', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }]],
     subtask: [['path', { d: 'M3 2.5v6.5a2 2 0 0 0 2 2h8M10 8l3 3-3 3', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.6, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }]],
+    dep: [['circle', { cx: 3.5, cy: 8, r: 2.3, fill: 'currentColor' }], ['path', { d: 'M6.5 8h6.2M10 5.2 12.8 8 10 10.8', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.7, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }]],
+    tick: [['path', { d: 'M3.5 8.5l3 3 6-6.5', fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }]],
+    copy: [['rect', { x: 5.5, y: 5.5, width: 8.5, height: 8.5, rx: 1.6, fill: 'none', stroke: 'currentColor', 'stroke-width': 1.6 }], ['path', { d: 'M10.5 3.2V2.8A.8.8 0 0 0 9.7 2H2.8a.8.8 0 0 0-.8.8v6.9a.8.8 0 0 0 .8.8h.4', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.6, 'stroke-linecap': 'round' }]],
+    chain: [['path', { d: 'M6.8 9.2a2.6 2.6 0 0 0 3.7 0l2.3-2.3a2.6 2.6 0 0 0-3.7-3.7l-.8.8M9.2 6.8a2.6 2.6 0 0 0-3.7 0L3.2 9.1a2.6 2.6 0 0 0 3.7 3.7l.8-.8', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.6, 'stroke-linecap': 'round' }]],
   };
   function icon(name, cls) {
     const svg = s('svg', { viewBox: '0 0 16 16', class: 'icon' + (cls ? ' ' + cls : ''), 'aria-hidden': 'true', focusable: 'false' });
@@ -568,6 +730,17 @@
     }
     return total;
   }
+  // The backlog is shown like a sprint with no dates.
+  const BACKLOG = 'backlog';
+  const BACKLOG_SPRINT = { id: BACKLOG, name: 'Backlog', state: BACKLOG, goal: '', start: null, end: null, completeDate: null };
+  const isBacklog = () => !!(state.data && state.data.sprint.state === BACKLOG);
+  function sprintTime(sp) {
+    if (sp.state === BACKLOG || !sp.start || !sp.end) return { now: new Date(), days: [], elapsed: 0, timeFrac: 0 };
+    const now = sprintClock(sp);
+    const days = workingDays(sp.start, sp.end);
+    const elapsed = elapsedWorkingDays(days, now);
+    return { now, days, elapsed, timeFrac: days.length ? clamp(elapsed / days.length, 0, 1) : 0 };
+  }
   function sprintClock(sprint) {
     if (sprint.state === 'closed') return sprint.completeDate || sprint.end;
     if (sprint.state === 'future') return sprint.start;
@@ -612,7 +785,7 @@
     const active = [
       [201, 'S', 'Single-page checkout layout behind a feature flag', 0, 0, 8, 'Done', 4, { done: 3, subtasks: [4, 4], labels: ['frontend'],
         desc: 'Collapse shipping, payment and review into one page.\n\nAcceptance:\n- Flag checkout.single_page controls the new layout\n- Old flow untouched when the flag is off\n- Lighthouse performance score stays above 90' }],
-      [202, 'S', 'Saved card selector for returning customers', 0, 2, 5, 'Done', 3, { done: 4, labels: ['frontend'] }],
+      [202, 'S', '[Web] [Saved cards] Card selector for returning customers', 0, 2, 5, 'Done', 3, { done: 4, labels: ['frontend'] }],
       [203, 'B', 'Tax line rounds to three decimals for JPY', 0, 1, 2, 'Done', 5, { done: 1, labels: ['i18n'],
         desc: 'JPY has no minor units, but the tax line shows ¥1,204.000.\nUse the currency exponent from the pricing service instead of a fixed 2.' }],
       [204, 'T', 'Add p95 latency SLO alerts for /payouts', 3, 5, 3, 'Done', 3, { done: 2 }],
@@ -626,7 +799,7 @@
       [211, 'T', 'Dashboard for checkout funnel drop-off', 3, 5, 2, 'In Review', 2, { since: 1 }],
       [212, 'B', '3DS challenge iframe cut off on Safari iOS 18', 0, 0, 3, 'In Review', 5, { since: 1, added: true, labels: ['frontend', 'safari'],
         desc: 'Reported by support after the flag went to staff. The challenge iframe has a fixed 400px height; iOS 18 Safari adds a toolbar that hides the submit button.' }],
-      [213, 'S', 'Apple Pay and Google Pay buttons on the review step', 0, 0, 5, 'In Progress', 4, { since: 6, subtasks: [2, 5], labels: ['frontend'] }],
+      [213, 'S', '[iOS] [Wallet buttons] Apple Pay button on the review step', 0, 0, 5, 'In Progress', 4, { since: 6, subtasks: [2, 5], labels: ['frontend'] }],
       [214, 'S', 'Payouts v2: idempotency keys on create', 2, 1, 5, 'In Progress', 4, { since: 3, flagged: true,
         desc: 'Blocked: waiting on sandbox credentials from the partner bank (ticket BANK-8812). Code is ready behind the payouts_v2 flag.' }],
       [215, 'K', 'Evaluate a rules DSL against JSON Logic', 1, 4, 3, 'In Progress', 3, { since: 2 }],
@@ -657,7 +830,7 @@
     ];
 
     const upcoming = [
-      [230, 'S', 'Single-page checkout to 50% of traffic', 0, 2, 3, 'To Do', 4, {}],
+      [230, 'S', '[Web] [One-page checkout] Roll out to 50% of traffic', 0, 2, 3, 'To Do', 4, {}],
       [231, 'S', 'Rules editor for the fraud operations team', 1, 3, 8, 'To Do', 4, {}],
       [232, 'S', 'Payout batch retries with exponential backoff', 2, 1, 5, 'To Do', 3, {}],
       [233, 'T', 'Remove the legacy checkout code path', 0, 0, 5, 'To Do', 3, {}],
@@ -710,6 +883,7 @@
             summary: ['Implement', 'Unit tests', 'Accessibility check', 'Analytics events', 'Docs'][i % 5],
             done: i < doneSubs,
           })),
+          links: [],
           url: null,
         };
       });
@@ -732,7 +906,85 @@
       42: makeIssues(active, sprints[1].start),
       43: makeIssues(upcoming, sprints[2].start),
     };
+    // [num, type, summary, epic, person, points, status, priority, extra], in rank order
+    const backlogRows = [
+      [253, 'B', 'Promo code accepted after it expires', 0, -1, 1, 'To Do', 5, {}],
+      [241, 'S', '[Web] [Saved cards] Remove a saved card from the account page', 0, 2, 3, 'To Do', 3, {}],
+      [242, 'S', '[iOS] [Saved cards] Remove a saved card from the account page', 0, -1, 3, 'To Do', 3, {}],
+      [243, 'B', 'Refund emails show the original order total', 2, 1, 2, 'To Do', 4, {}],
+      [244, 'S', 'Merchant-level payout holds', 2, -1, 8, 'To Do', 3, {}],
+      [246, 'S', 'Fraud rule versioning and rollback', 1, -1, null, 'To Do', 4, {}],
+      [248, 'B', 'Fraud review queue export times out', 1, 3, 2, 'To Do', 3, {}],
+      [240, 'S', 'Saved addresses for returning customers', 0, -1, 5, 'To Do', 3, {}],
+      [245, 'T', 'Upgrade the payments SDK to v5', 3, 5, null, 'To Do', 3, {}],
+      [251, 'T', 'Alert when a payout batch stalls for an hour', 3, -1, 2, 'To Do', 3, {}],
+      [247, 'K', 'Spike: real-time payouts on the new bank rails', 2, -1, 3, 'To Do', 2, {}],
+      [249, 'S', 'Checkout in Spanish and Portuguese', 0, -1, 8, 'To Do', 2, {}],
+      [252, 'S', 'Merchant payout statements by email', 2, -1, 5, 'To Do', 2, {}],
+      [254, 'T', 'Archive fraud decisions older than two years', 1, -1, null, 'To Do', 1, {}],
+    ];
+    const backlog = makeIssues(backlogRows, sprints[1].start);
 
+    // Work assigned to "you" (Marcus) on other teams' boards, for the My work tab.
+    const me = people[1];
+    const boardNames = new Map([[7, 'Payments team board'], [12, 'Merchant app board'], [15, 'Platform board']]);
+    const otherSprints = {
+      mob: { id: 191, name: 'Mobile Sprint 19', state: 'active', boardId: 12 },
+      plat: { id: 2621, name: 'Platform 2026.21', state: 'active', boardId: 15 },
+      platNext: { id: 2622, name: 'Platform 2026.22', state: 'future', boardId: 15 },
+    };
+    const elsewhere = [
+      ['MOB-418', 'Bug', 'Payout status screen shows yesterday\'s balance', 'In Progress', 'progress', 4, 'mob', { key: 'MOB', name: 'Merchant App' }, 2],
+      ['MOB-421', 'Story', 'Push notification when a payout lands', 'To Do', 'todo', 3, 'mob', { key: 'MOB', name: 'Merchant App' }, 4],
+      ['PLAT-77', 'Bug', 'Staging deploys fail when the payouts migration runs twice', 'In Review', 'progress', 4, 'plat', { key: 'PLAT', name: 'Platform' }, 1],
+      ['PLAT-91', 'Task', 'Rotate the payouts service database credentials', 'To Do', 'todo', 5, 'platNext', { key: 'PLAT', name: 'Platform' }, 6],
+      ['OPS-33', 'Task', 'Write the on-call handover notes for payouts', 'To Do', 'todo', 2, null, { key: 'OPS', name: 'Operations' }, 9],
+    ].map(([key, type, summary, status, category, prio, sprintKey, project, updatedAgo]) => ({
+      key, summary, type, typeKind: typeKind(type), priority: prios[prio], priorityRank: prio, status, statusId: '', category,
+      assignee: me, reporter: people[(key.length + prio) % people.length], estimate: null, labels: [], components: [], epic: null,
+      flagged: false, added: false, created: ago(updatedAgo + 12), updated: ago(updatedAgo, 14), resolved: null,
+      statusChanged: category === 'progress' ? ago(updatedAgo) : null, description: describe(type, summary), subtasks: [],
+      links: [], url: null, project, sprint: sprintKey ? otherSprints[sprintKey] : null, offBoard: true,
+    }));
+
+    // Dependencies: each issue lists the issues it waits on ("is blocked by").
+    const outside = {
+      'BANK-8812': { summary: 'Sandbox credentials for the partner bank', status: 'In Progress', category: 'progress', type: 'Task' },
+      'MOB-412': { summary: 'Show payout batch status in the merchant app', status: 'To Do', category: 'todo', type: 'Story' },
+    };
+    const waitsOn = {
+      'PAY-213': ['PAY-201'],
+      'PAY-221': ['PAY-201'],
+      'PAY-216': ['PAY-212', 'PAY-208', 'PAY-213', 'PAY-222'],
+      'PAY-218': ['PAY-206', 'PAY-210'],
+      'PAY-214': ['BANK-8812'],
+      'PAY-217': ['PAY-214'],
+      'PAY-220': ['PAY-209'],
+      'MOB-412': ['PAY-209'],
+      'MOB-418': ['PAY-209'],
+      'PAY-230': ['PAY-216'],
+      'PAY-233': ['PAY-230'],
+      'PAY-182': ['PAY-173'],
+      'PAY-252': ['PAY-244'],
+      'PAY-246': ['PAY-218'],
+      'PAY-242': ['PAY-241'],
+    };
+    const relatesTo = { 'PAY-219': ['PAY-216'], 'PLAT-77': ['PAY-204'] };
+    const everyIssue = new Map([...Object.values(issuesBySprint).flat(), ...backlog, ...elsewhere].map((i) => [i.key, i]));
+    const snapshot = (key) => {
+      const i = everyIssue.get(key);
+      const o = i || outside[key];
+      return { key, summary: o.summary, status: o.status, category: o.category, type: o.type, typeKind: typeKind(o.type), url: null };
+    };
+    const link = (from, kind, phrase, to) => { const i = everyIssue.get(from); if (i) i.links.push({ kind, phrase, ...snapshot(to) }); };
+    for (const [a, list] of Object.entries(waitsOn)) {
+      for (const b of list) { link(a, 'waitsOn', 'is blocked by', b); link(b, 'blocks', 'blocks', a); }
+    }
+    for (const [a, list] of Object.entries(relatesTo)) {
+      for (const b of list) { link(a, 'related', 'relates to', b); link(b, 'related', 'relates to', a); }
+    }
+
+    let nextNum = 300;
     return {
       kind: 'demo',
       label: 'Demo data',
@@ -741,12 +993,91 @@
       async listSprints() { return sprints.map((sp) => ({ ...sp })); },
       async loadSprint(boardId, sprintId) {
         await new Promise((r) => setTimeout(r, 120));
+        if (sprintId === BACKLOG) return { issues: backlog, addedKeys: null, removedCount: null };
         const issues = issuesBySprint[sprintId] || [];
         return {
           issues,
           addedKeys: new Set(issues.filter((i) => i.added).map((i) => i.key)),
           removedCount: sprintId === 42 ? 1 : 0,
         };
+      },
+      async myWork() {
+        await new Promise((r) => setTimeout(r, 150));
+        const here = Object.entries(issuesBySprint).flatMap(([id, list]) => {
+          const sp = sprints.find((x) => x.id === Number(id));
+          return list.map((i) => ({ ...i, project: { key: 'PAY', name: 'Payments' }, sprint: { id: sp.id, name: sp.name, state: sp.state, boardId: 7 } }));
+        });
+        const mine = [...here, ...backlog.map((i) => ({ ...i, project: { key: 'PAY', name: 'Payments' }, sprint: null })), ...elsewhere]
+          .filter((i) => i.assignee && i.assignee.id === me.id && i.category !== 'done' && !(i.sprint && i.sprint.state === 'closed'));
+        return { me, issues: mine, boardNames };
+      },
+      async createMeta() {
+        return {
+          types: ['Story', 'Bug', 'Task', 'Spike'].map((name) => ({ id: name, name })),
+          epics: epics.map((e) => ({ key: e.key, name: e.name })),
+          users: people.map((p) => ({ ...p, isMe: p.id === me.id })),
+        };
+      },
+      async createIssue(input) {
+        await new Promise((r) => setTimeout(r, 300));
+        const key = 'PAY-' + nextNum++;
+        const now = new Date();
+        const sprint = sprints.find((sp) => sp.id === input.sprintId) || null;
+        const issue = {
+          key, summary: input.summary, type: input.type.name, typeKind: typeKind(input.type.name), priority: 'Medium', priorityRank: 3,
+          status: 'To Do', statusId: statuses['To Do'].id, category: 'todo', assignee: people.find((p) => p.id === input.assigneeId) || null,
+          reporter: me, estimate: input.estimate, labels: [], components: [], epic: epics.find((e) => e.key === input.epicKey) || null,
+          flagged: false, added: !!(sprint && sprint.state === 'active'), created: now, updated: now, resolved: null, statusChanged: null,
+          description: input.description, subtasks: [], links: [], url: null,
+        };
+        (sprint ? issuesBySprint[sprint.id] : backlog).push(issue);
+        everyIssue.set(key, issue);
+        if (input.cloneOf) {
+          link(key, 'related', 'clones', input.cloneOf);
+          link(input.cloneOf, 'related', 'is cloned by', key);
+        }
+        return { key, url: null, warnings: [] };
+      },
+      async editInfo(issue) {
+        await new Promise((r) => setTimeout(r, 60));
+        return {
+          editable: new Set(['summary', 'description', 'priority', 'labels']),
+          priorities: Object.keys(prios).sort((a, b) => b - a).map((rank) => ({ id: prios[rank], name: prios[rank] })),
+          transitions: Object.entries(statuses).filter(([name]) => name !== issue.status)
+            .map(([name, st]) => ({ id: name, name, to: { id: st.id, name, category: st.category } })),
+        };
+      },
+      async updateFields() { await new Promise((r) => setTimeout(r, 200)); },
+      async transition() { await new Promise((r) => setTimeout(r, 200)); },
+      async assign() { await new Promise((r) => setTimeout(r, 200)); },
+      async setEstimate() { await new Promise((r) => setTimeout(r, 200)); },
+      async setEpic() { await new Promise((r) => setTimeout(r, 200)); },
+      async setEpicMany() { await new Promise((r) => setTimeout(r, 250)); },
+      async moveIssues(keys, target) {
+        await new Promise((r) => setTimeout(r, 250));
+        const dest = target === BACKLOG ? backlog : issuesBySprint[target];
+        const destSprint = sprints.find((sp) => sp.id === target);
+        for (const key of keys) {
+          for (const list of [...Object.values(issuesBySprint), backlog]) {
+            const n = list.findIndex((i) => i.key === key);
+            if (n < 0) continue;
+            const [issue] = list.splice(n, 1);
+            issue.added = !!(destSprint && destSprint.state === 'active');
+            dest.push(issue);
+            break;
+          }
+        }
+      },
+      async getIssue(key) {
+        const i = everyIssue.get(key.toUpperCase());
+        if (!i) throw new JiraError(404, `There's no issue ${key.toUpperCase()}, or you can't see it.`);
+        return { ...i, project: i.project || { key: 'PAY', name: 'Payments' } };
+      },
+      async findIssues(text) {
+        await new Promise((r) => setTimeout(r, 150));
+        const q = text.toLowerCase();
+        return [...everyIssue.values()].filter((i) => i.summary.toLowerCase().includes(q)).slice(0, 10)
+          .map((i) => ({ ...i, project: i.project || { key: 'PAY', name: 'Payments' } }));
       },
     };
   }
@@ -765,6 +1096,16 @@
     if (/task|chore|improvement/i.test(name)) return 'task';
     return 'other';
   }
+  // "is blocked by" / "depends on" mean this issue waits; "blocks" means others wait on it.
+  function linkKind(phrase) {
+    if (/is blocked by|blocked by|depends on|is dependent on|requires|waits on|is caused by/i.test(phrase)) return 'waitsOn';
+    if (/\bblocks\b|is depended on by|is required by|dependency (of|for)|is a prerequisite|causes/i.test(phrase)) return 'blocks';
+    return 'related';
+  }
+  const categoryOf = (status) => {
+    const k = status && status.statusCategory && status.statusCategory.key;
+    return k === 'done' ? 'done' : k === 'indeterminate' ? 'progress' : 'todo';
+  };
   const PRIORITY_RANKS = { highest: 5, blocker: 5, critical: 5, high: 4, major: 4, medium: 3, normal: 3, low: 2, minor: 2, lowest: 1, trivial: 1 };
 
   function adfToText(node) {
@@ -775,6 +1116,54 @@
     return /^(paragraph|heading|listItem|codeBlock|blockquote)$/.test(node.type) ? inner + '\n' : inner;
   }
 
+  // Descriptions arrive as plain text, Jira wiki markup, or (on some Jira Server
+  // setups and email-created issues) HTML. Turn all of them into readable text.
+  // DOMParser builds an inert document: nothing in it runs or loads.
+  const BLOCK_TAGS = /^(P|DIV|H[1-6]|LI|TR|BLOCKQUOTE|PRE|TABLE|UL|OL|SECTION|ARTICLE|HEADER|FOOTER)$/;
+  function htmlToText(html) {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    let out = '';
+    (function walk(node) {
+      for (const n of node.childNodes) {
+        if (n.nodeType === Node.TEXT_NODE) { out += n.nodeValue.replace(/\s+/g, ' '); continue; }
+        if (n.nodeType !== Node.ELEMENT_NODE || /^(SCRIPT|STYLE|HEAD|TEMPLATE)$/.test(n.tagName)) continue;
+        if (n.tagName === 'BR') { out += '\n'; continue; }
+        const block = BLOCK_TAGS.test(n.tagName);
+        if (block) out += '\n';
+        if (n.tagName === 'LI') out += '- ';
+        if (n.tagName === 'TD' || n.tagName === 'TH') out += ' ';
+        if (n.tagName === 'IMG' && n.getAttribute('alt')) out += `[${n.getAttribute('alt')}]`;
+        walk(n);
+        if (n.tagName === 'A' && n.getAttribute('href') && !/^(#|javascript:)/i.test(n.getAttribute('href')) &&
+          n.textContent.trim() !== n.getAttribute('href')) out += ` (${n.getAttribute('href')})`;
+        if (block && n.tagName !== 'LI') out += '\n';
+      }
+    })(doc.body);
+    return out.replace(/[ \t]+\n/g, '\n').replace(/\n[ \t]+/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+  }
+  function wikiToText(text) {
+    return text
+      .replace(/\{\{([^}]+)\}\}/g, '$1')
+      .replace(/\{(code|noformat|quote|panel|color)(:[^}]*)?\}/g, '')
+      .replace(/^h[1-6]\.\s+/gm, '')
+      .replace(/^\s*[*#]+\s+/gm, '- ')
+      .replace(/\[([^|\]]+)\|([^\]]+)\]/g, '$1 ($2)')
+      .replace(/\[~([^\]]+)\]/g, '@$1')
+      .replace(/(^|[\s(])\*([^*\n]+)\*(?=[\s).,:;!?]|$)/gm, '$1$2')
+      .replace(/(^|[\s(])_([^_\n]+)_(?=[\s).,:;!?]|$)/gm, '$1$2')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }
+  const HTML_TAG = /<\/?(p|div|br|span|a|b|strong|i|em|u|ul|ol|li|h[1-6]|table|tr|td|th|pre|code|img|font|blockquote)\b[^>]*>/i;
+  // 'adf' (Jira Cloud rich text), 'html', or 'wiki' (plain text or Jira wiki markup).
+  const descriptionFormat = (raw) => (raw == null ? 'wiki' : typeof raw !== 'string' ? 'adf' : HTML_TAG.test(raw) ? 'html' : 'wiki');
+  function descriptionText(raw) {
+    if (raw == null) return '';
+    if (typeof raw !== 'string') return adfToText(raw).trim();
+    if (HTML_TAG.test(raw)) return htmlToText(raw);
+    return wikiToText(raw);
+  }
+
   function base64(text) {
     return btoa(String.fromCharCode(...new TextEncoder().encode(text)));
   }
@@ -782,18 +1171,21 @@
   function liveSource(conn) {
     const auth = conn.email ? 'Basic ' + base64(conn.email + ':' + conn.token) : 'Bearer ' + conn.token;
 
-    async function get(path, params) {
+    const get = (path, params) => request('GET', path, params);
+    async function request(method, path, params, body) {
       const qs = params ? '?' + new URLSearchParams(params) : '';
+      const headers = { 'X-Jira-Url': conn.baseUrl, 'X-Jira-Auth': auth };
+      if (body !== undefined) headers['Content-Type'] = 'application/json';
       let res;
       try {
-        res = await fetch('/jira' + path + qs, { headers: { 'X-Jira-Url': conn.baseUrl, 'X-Jira-Auth': auth } });
+        res = await fetch('/jira' + path + qs, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
       } catch (e) {
         throw new JiraError(0, "Can't reach the local server. Is server.py still running?");
       }
-      let body = null;
-      try { body = await res.json(); } catch (e) { /* not JSON */ }
-      if (res.ok) return body;
-      throw new JiraError(res.status, describeError(res.status, body));
+      let data = null;
+      try { data = await res.json(); } catch (e) { /* not JSON, or empty (204) */ }
+      if (res.ok) return data;
+      throw new JiraError(res.status, describeError(res.status, data));
     }
 
     function describeError(status, body) {
@@ -801,14 +1193,15 @@
         Object.values(body.errors || {}).join(' '));
       if (status === 401) return 'Jira didn\'t accept the token (401). Check that it\'s correct and hasn\'t expired. On Jira Cloud, also enter your email.';
       if (status === 403) return 'The token works, but it doesn\'t have permission for this (403).' + (detail ? ' ' + detail : '');
+      if (status === 400 && detail) return detail;
       if (status === 404) return (detail || 'Not found (404).') + ' Check the Jira URL, including any path such as /jira, and the project key.';
       return detail || `Jira answered with HTTP ${status}.`;
     }
 
-    async function pages(path, params, pick) {
+    async function pages(path, params, pick, limit = 10000) {
       const out = [];
       let startAt = 0;
-      for (let guard = 0; guard < 200; guard++) {
+      for (let guard = 0; guard < 200 && out.length < limit; guard++) {
         const r = await get(path, { ...params, startAt, maxResults: 50 });
         const vals = pick(r) || [];
         out.push(...vals);
@@ -820,10 +1213,10 @@
       return out;
     }
 
+    const browse = (key) => `${conn.baseUrl}/browse/${encodeURIComponent(key)}`;
     function normalize(raw, estimate) {
       const f = raw.fields || {};
-      const catKey = f.status && f.status.statusCategory && f.status.statusCategory.key;
-      const category = catKey === 'done' ? 'done' : catKey === 'indeterminate' ? 'progress' : 'todo';
+      const category = categoryOf(f.status);
       let est = estimate.fieldId ? f[estimate.fieldId] : null;
       if (typeof est === 'number' && estimate.unit === 'h') est = Math.round(est / 360) / 10;
       if (typeof est !== 'number') est = null;
@@ -837,7 +1230,8 @@
       }
       const type = (f.issuetype && f.issuetype.name) || 'Issue';
       const priority = (f.priority && f.priority.name) || 'None';
-      const person = (p) => (p ? { id: p.accountId || p.key || p.name || p.displayName, name: p.displayName || p.name || 'Unknown' } : null);
+      const person = (p) => (p ? { id: p.accountId || p.key || p.name || p.displayName, name: p.displayName || p.name || 'Unknown',
+        accountId: p.accountId || null, username: p.name || null } : null);
       return {
         key: raw.key,
         summary: f.summary || '(no summary)',
@@ -860,15 +1254,102 @@
         updated: parseDate(f.updated),
         resolved: parseDate(f.resolutiondate),
         statusChanged: parseDate(f.statuscategorychangedate),
-        description: typeof f.description === 'string' ? f.description : adfToText(f.description).trim(),
+        description: descriptionText(f.description),
+        descriptionFormat: descriptionFormat(f.description),
+        descriptionRaw: typeof f.description === 'string' ? f.description : null,
         subtasks: (f.subtasks || []).map((st) => ({
           key: st.key,
           summary: (st.fields && st.fields.summary) || st.key,
           done: !!(st.fields && st.fields.status && st.fields.status.statusCategory && st.fields.status.statusCategory.key === 'done'),
         })),
-        url: `${conn.baseUrl}/browse/${encodeURIComponent(raw.key)}`,
+        links: (f.issuelinks || []).map((l) => {
+          const other = l.inwardIssue || l.outwardIssue;
+          if (!other) return null;
+          const t = l.type || {};
+          // Jira lists the other issue on the side it sits; the phrase reads from this issue.
+          const phrase = (l.inwardIssue ? t.inward : t.outward) || t.name || 'relates to';
+          const of = other.fields || {};
+          const otype = (of.issuetype && of.issuetype.name) || 'Issue';
+          return { kind: linkKind(phrase), phrase, key: other.key, summary: of.summary || other.key,
+            status: (of.status && of.status.name) || 'Unknown', category: categoryOf(of.status), type: otype, typeKind: typeKind(otype), url: browse(other.key) };
+        }).filter(Boolean),
+        url: browse(raw.key),
         isSubtask: !!(f.issuetype && f.issuetype.subtask),
       };
+    }
+
+    const ANYWHERE_FIELDS = ['summary', 'status', 'issuetype', 'priority', 'assignee', 'reporter', 'labels', 'components', 'created',
+      'updated', 'resolutiondate', 'statuscategorychangedate', 'description', 'subtasks', 'parent', 'issuelinks', 'project'];
+    // An issue from any board: adds its project and current sprint.
+    function normalizeAnywhere(r, sprintField) {
+      const i = normalize(r, { fieldId: null });
+      const p = (r.fields || {}).project;
+      i.project = p ? { key: p.key, name: p.name || p.key } : { key: r.key.split('-')[0], name: r.key.split('-')[0] };
+      i.sprint = pickSprint(parseSprints(sprintField ? (r.fields || {})[sprintField] : null));
+      i.offBoard = true;
+      return i;
+    }
+
+    // Jira's built-in "Cloners" type reads "<new> clones <original>". Fall back to
+    // "Relates" on instances where it was removed.
+    let cloneTypeCache = null;
+    function cloneLinkType() {
+      if (!cloneTypeCache) {
+        cloneTypeCache = get('/rest/api/2/issueLinkType').then((r) => {
+          const types = (r && r.issueLinkTypes) || [];
+          return types.find((t) => /clon/i.test(t.name) || /^clones$/i.test(t.outward || '')) || types.find((t) => /relat/i.test(t.name)) || null;
+        }).catch((e) => { cloneTypeCache = null; throw e; });
+      }
+      return cloneTypeCache;
+    }
+    async function linkClone(newKey, originalKey, warnings) {
+      const t = await cloneLinkType();
+      if (!t) throw new JiraError(400, 'this Jira has no "Cloners" or "Relates" link type.');
+      // In a standalone link, inwardIssue is the source: "<inwardIssue> clones <outwardIssue>".
+      await request('POST', '/rest/api/2/issueLink', null, { type: { name: t.name }, inwardIssue: { key: newKey }, outwardIssue: { key: originalKey } });
+      // Read it back so a reversed link is reported rather than silently wrong.
+      const back = await get(`/rest/api/2/issue/${encodeURIComponent(newKey)}`, { fields: 'issuelinks' }).catch(() => null);
+      const l = back && ((back.fields || {}).issuelinks || []).find((x) => (x.inwardIssue || x.outwardIssue || {}).key === originalKey);
+      if (l && l.inwardIssue && t.inward !== t.outward) {
+        warnings.push(`Linked to ${originalKey}, but Jira shows it as "${newKey} ${t.inward} ${originalKey}".`);
+      }
+      if (!/clon/i.test(t.name)) warnings.push(`Linked to ${originalKey} with "${t.outward || t.name}" because this Jira has no clone link type.`);
+    }
+
+    let projectCache = null;
+    async function projectInfo() {
+      if (!projectCache) projectCache = get(`/rest/api/2/project/${encodeURIComponent(conn.project)}`).catch((e) => { projectCache = null; throw e; });
+      return projectCache;
+    }
+    let sprintFieldCache;
+    async function sprintFieldId() {
+      if (sprintFieldCache === undefined) {
+        const all = await get('/rest/api/2/field').catch(() => []);
+        const f = (all || []).find((x) => x.schema && x.schema.custom === 'com.pyxis.greenhopper.jira:gh-sprint');
+        sprintFieldCache = f ? f.id : null;
+      }
+      return sprintFieldCache;
+    }
+    // Jira Cloud moved JQL search to /search/jql (token paging); Server and Data
+    // Center still use /search (startAt paging). Try the likely one first.
+    async function search(jql, fields, limit) {
+      const viaJql = async () => {
+        const out = [];
+        let token = null;
+        for (let guard = 0; guard < 20 && out.length < limit; guard++) {
+          const r = await get('/rest/api/2/search/jql', { jql, fields, maxResults: 100, ...(token ? { nextPageToken: token } : {}) });
+          out.push(...(r.issues || []));
+          token = r.nextPageToken;
+          if (!token || r.isLast) break;
+        }
+        return out;
+      };
+      const viaSearch = () => pages('/rest/api/2/search', { jql, fields }, (r) => r.issues, limit);
+      const [first, second] = conn.email ? [viaJql, viaSearch] : [viaSearch, viaJql];
+      try { return await first(); } catch (e) {
+        if (e.status === 404 || e.status === 410 || e.status === 405) return second();
+        throw e;
+      }
     }
 
     return {
@@ -900,7 +1381,13 @@
       async loadSprint(boardId, sprintId, config) {
         const fields = ['summary', 'status', 'issuetype', 'priority', 'assignee', 'reporter', 'labels', 'components',
           'created', 'updated', 'resolutiondate', 'statuscategorychangedate', 'description', 'subtasks', 'parent',
-          'epic', 'flagged', config.estimate.fieldId].filter(Boolean).join(',');
+          'epic', 'flagged', 'issuelinks', config.estimate.fieldId].filter(Boolean).join(',');
+        if (sprintId === BACKLOG) {
+          // Issues on the board that aren't in an active or upcoming sprint, in rank order.
+          const raw = await pages(`/rest/agile/1.0/board/${boardId}/backlog`, { fields }, (r) => r.issues, BACKLOG_LIMIT);
+          const issues = raw.map((r) => normalize(r, config.estimate)).filter((i) => !i.isSubtask && i.category !== 'done');
+          return { issues, addedKeys: null, removedCount: null, truncated: raw.length >= BACKLOG_LIMIT };
+        }
         const [raw, report] = await Promise.all([
           pages(`/rest/agile/1.0/board/${boardId}/sprint/${sprintId}/issue`, { fields }, (r) => r.issues),
           // Internal Jira endpoint behind the built-in sprint report; optional.
@@ -913,13 +1400,150 @@
         const removedCount = contents && Array.isArray(contents.puntedIssues) ? contents.puntedIssues.length : null;
         return { issues, addedKeys, removedCount };
       },
+
+      // Open issues assigned to the token's owner, anywhere in Jira.
+      async myWork() {
+        const sprintField = await sprintFieldId();
+        const fields = ['summary', 'status', 'issuetype', 'priority', 'assignee', 'reporter', 'labels', 'components', 'created',
+          'updated', 'resolutiondate', 'statuscategorychangedate', 'description', 'subtasks', 'parent', 'issuelinks', 'project',
+          sprintField].filter(Boolean).join(',');
+        const [me, raw] = await Promise.all([
+          get('/rest/api/2/myself'),
+          search('assignee = currentUser() AND statusCategory != Done ORDER BY updated DESC', fields, 300),
+        ]);
+        const issues = raw.map((r) => normalizeAnywhere(r, sprintField));
+        const boardIds = [...new Set(issues.map((i) => i.sprint && i.sprint.boardId).filter((id) => id != null))].slice(0, 25);
+        const names = await Promise.all(boardIds.map((id) => get(`/rest/agile/1.0/board/${id}`).then((b) => b.name).catch(() => null)));
+        const boardNames = new Map(boardIds.map((id, n) => [id, names[n]]).filter(([, n]) => n));
+        return { me: { id: me.accountId || me.key || me.name, name: me.displayName || me.name }, issues, boardNames };
+      },
+
+      // Editing from the details panel. editInfo says what this token may change.
+      async editInfo(issue) {
+        const k = encodeURIComponent(issue.key);
+        const [em, tr] = await Promise.all([get(`/rest/api/2/issue/${k}/editmeta`), get(`/rest/api/2/issue/${k}/transitions`)]);
+        const f = (em && em.fields) || {};
+        return {
+          editable: new Set(Object.keys(f)),
+          priorities: ((f.priority && f.priority.allowedValues) || []).map((p) => ({ id: String(p.id), name: p.name })),
+          transitions: ((tr && tr.transitions) || []).filter((t) => t.to).map((t) => ({
+            id: String(t.id), name: t.name, to: { id: String(t.to.id), name: t.to.name, category: categoryOf(t.to) } })),
+        };
+      },
+      async updateFields(key, fields) {
+        await request('PUT', `/rest/api/2/issue/${encodeURIComponent(key)}`, null, { fields });
+      },
+      async transition(key, id) {
+        await request('POST', `/rest/api/2/issue/${encodeURIComponent(key)}/transitions`, null, { transition: { id } });
+      },
+      async assign(key, user) {
+        const body = user ? (user.accountId ? { accountId: user.accountId } : { name: user.username }) : conn.email ? { accountId: null } : { name: null };
+        await request('PUT', `/rest/api/2/issue/${encodeURIComponent(key)}/assignee`, null, body);
+      },
+      async setEstimate(key, value, ctx) {
+        await request('PUT', `/rest/agile/1.0/issue/${encodeURIComponent(key)}/estimation`, { boardId: ctx.boardId },
+          { value: ctx.unit === 'h' ? `${value}h` : String(value) });
+      },
+      async setEpic(key, epicKey) {
+        await request('POST', `/rest/agile/1.0/epic/${epicKey ? encodeURIComponent(epicKey) : 'none'}/issue`, null, { issues: [key] });
+      },
+      async setEpicMany(keys, epicKey) {
+        await request('POST', `/rest/agile/1.0/epic/${epicKey ? encodeURIComponent(epicKey) : 'none'}/issue`, null, { issues: keys });
+      },
+
+      // target: a sprint id, or BACKLOG. Jira takes at most 50 issues per call.
+      async moveIssues(keys, target) {
+        for (let n = 0; n < keys.length; n += 50) {
+          const issues = keys.slice(n, n + 50);
+          if (target === BACKLOG) await request('POST', '/rest/agile/1.0/backlog/issue', null, { issues });
+          else await request('POST', `/rest/agile/1.0/sprint/${target}/issue`, null, { issues });
+        }
+      },
+
+      // One issue by key, from any project the token can see.
+      async getIssue(key) {
+        const sprintField = await sprintFieldId();
+        const r = await get(`/rest/api/2/issue/${encodeURIComponent(key.toUpperCase())}`, { fields: ANYWHERE_FIELDS.concat(sprintField || []).join(',') });
+        return normalizeAnywhere(r, sprintField);
+      },
+      async findIssues(text) {
+        const sprintField = await sprintFieldId();
+        // JQL's text search rejects + - & | ! ( ) { } [ ] ^ ~ * ? \ : and quotes, so search on the words only.
+        const words = text.replace(/[+\-&|!(){}[\]^~*?\\:"']/g, ' ').replace(/\s+/g, ' ').trim();
+        if (!words) return [];
+        const jql = `summary ~ "${words}" ORDER BY updated DESC`;
+        const raw = await search(jql, ANYWHERE_FIELDS.concat(sprintField || []).join(','), 10);
+        return raw.slice(0, 10).map((r) => normalizeAnywhere(r, sprintField));
+      },
+
+      async createMeta(boardId) {
+        const project = await projectInfo();
+        const [epics, users, me] = await Promise.all([
+          pages(`/rest/agile/1.0/board/${boardId}/epic`, { done: false }, (r) => r.values, 500).catch(() => []),
+          get('/rest/api/2/user/assignable/search', conn.email
+            ? { project: project.key, maxResults: 500 }
+            : { project: project.key, username: '', maxResults: 500 }).catch(() => []),
+          get('/rest/api/2/myself').catch(() => null),
+        ]);
+        const meId = me && (me.accountId || me.key || me.name);
+        return {
+          types: (project.issueTypes || []).filter((t) => !t.subtask && !/^epic$/i.test(t.name) && t.hierarchyLevel !== 1)
+            .map((t) => ({ id: String(t.id), name: t.name })),
+          epics: epics.filter((e) => !e.done).map((e) => ({ key: e.key, name: e.name || e.summary || e.key })),
+          users: (users || []).filter((u) => u.active !== false).map((u) => ({
+            id: u.accountId || u.key || u.name, name: u.displayName || u.name, accountId: u.accountId || null, username: u.name || null,
+            isMe: (u.accountId || u.key || u.name) === meId,
+          })),
+        };
+      },
+
+      // Creates the issue, then files it: sprint, epic, estimate, assignee. Each of
+      // those uses its own endpoint so it works even when the field isn't on the
+      // create screen. A failed step becomes a warning; the issue still exists.
+      async createIssue(input, ctx) {
+        const project = await projectInfo();
+        const fields = { project: { id: String(project.id) }, issuetype: { id: input.type.id }, summary: input.summary };
+        if (input.description) fields.description = input.description;
+        const created = await request('POST', '/rest/api/2/issue', null, { fields });
+        const key = created.key;
+        const warnings = [];
+        const step = async (what, fn) => { try { await fn(); } catch (e) { warnings.push(`Couldn't ${what}: ${e.message}`); } };
+        if (input.sprintId != null) await step('add it to the sprint', () => request('POST', `/rest/agile/1.0/sprint/${input.sprintId}/issue`, null, { issues: [key] }));
+        if (input.epicKey) await step('add it to the epic', () => request('POST', `/rest/agile/1.0/epic/${encodeURIComponent(input.epicKey)}/issue`, null, { issues: [key] }));
+        if (input.estimate != null) {
+          await step('set the estimate', () => request('PUT', `/rest/agile/1.0/issue/${encodeURIComponent(key)}/estimation`, { boardId: ctx.boardId },
+            { value: ctx.unit === 'h' ? `${input.estimate}h` : String(input.estimate) }));
+        }
+        if (input.assignee) {
+          await step('assign it', () => request('PUT', `/rest/api/2/issue/${encodeURIComponent(key)}/assignee`, null,
+            input.assignee.accountId ? { accountId: input.assignee.accountId } : { name: input.assignee.username }));
+        }
+        if (input.cloneOf) await step(`link it to ${input.cloneOf}`, () => linkClone(key, input.cloneOf, warnings));
+        return { key, url: browse(key), warnings };
+      },
     };
+
   }
+
+  const BACKLOG_LIMIT = 1000;
+
+  // The Sprint field comes back as objects (Cloud, newer Data Center) or as
+  // "com.atlassian.greenhopper.service.sprint.Sprint@1a2b[id=3,rapidViewId=7,state=ACTIVE,name=Sprint 3,...]".
+  function parseSprints(v) {
+    if (!Array.isArray(v)) return [];
+    return v.map((x) => {
+      if (x && typeof x === 'object') return { id: x.id, name: x.name, state: String(x.state || '').toLowerCase(), boardId: x.boardId != null ? x.boardId : x.rapidViewId };
+      const m = (k) => (String(x).match(new RegExp('[\\[,]' + k + '=([^,\\]]*)')) || [])[1];
+      const id = Number(m('id'));
+      return isNaN(id) ? null : { id, name: m('name') || `Sprint ${id}`, state: (m('state') || '').toLowerCase(), boardId: Number(m('rapidViewId')) || null };
+    }).filter(Boolean);
+  }
+  const pickSprint = (list) => list.find((sp) => sp.state === 'active') || list.find((sp) => sp.state === 'future') || null;
 
   // ======================================================================
   // App state
   // ======================================================================
-  const prefs = Object.assign({ view: 'board', lanes: 'none', metric: 'points' }, store.get('localStorage', 'sprintboard:prefs', {}));
+  const prefs = Object.assign({ view: 'board', lanes: 'none', metric: 'points', tab: 'sprint', backlogView: 'list', platforms: null, features: [], platformAssignee: {} }, store.get('localStorage', 'sprintboard:prefs', {}));
   const state = {
     source: null,
     boards: [], boardId: null,
@@ -931,6 +1555,11 @@
     sort: { key: 'rank', dir: 1 },
     epicColor: new Map(),
     loadSeq: 0,
+    mine: null,          // { me, issues, boardNames } for the My work tab
+    mineFilter: { q: '', type: '' },
+    createMeta: null,    // per-board lookups for the create form
+    selected: new Set(), // issue keys ticked in the list, for moving
+    sprintScreen: { name: 'sprint', note: '' },
   };
   const savePrefs = () => store.set('localStorage', 'sprintboard:prefs', prefs);
 
@@ -958,12 +1587,23 @@
     for (const i of issues) { const v = valueOf(i); t[i.category] += v; t.total += v; }
     return t;
   }
+  // A link points at an issue that may be in the loaded sprint; prefer its live copy.
+  function resolveLink(link) {
+    const here = state.data && state.data.byKey.get(link.key);
+    return here ? { ...link, summary: here.summary, status: here.status, category: here.category, typeKind: here.typeKind, issue: here } : link;
+  }
+  const waitsOnOpen = (issue) => (issue.category === 'done' ? [] :
+    issue.links.filter((l) => l.kind === 'waitsOn').map(resolveLink).filter((l) => l.category !== 'done'));
+  const keyList = (links, max = 2) => links.slice(0, max).map((l) => l.key).join(', ') + (links.length > max ? ` +${links.length - max}` : '');
+
   const isBlocked = (i) => i.category !== 'done' && (i.flagged || /block|imped/i.test(i.status) || i.labels.some((l) => /^blocked$/i.test(l)));
 
   function attentionReasons(issue, sprint, timeFrac, now) {
     if (issue.category === 'done') return [];
     const out = [];
     if (isBlocked(issue)) out.push({ rank: 5, icon: 'flag', tone: 'critical', text: issue.flagged ? 'Flagged as blocked' : `Status is ${issue.status}` });
+    const waits = waitsOnOpen(issue);
+    if (waits.length) out.push({ rank: 4.5, icon: 'dep', tone: 'critical', text: `Waits on ${keyList(waits)}` });
     if (issue.category === 'progress' && issue.statusChanged && sprint.state === 'active') {
       const days = Math.floor((now - issue.statusChanged) / DAY_MS);
       if (days >= 4) out.push({ rank: 4, icon: 'clock', tone: 'serious', text: `In progress for ${days} days` });
@@ -980,9 +1620,7 @@
     const f = state.filters;
     const q = f.q.trim().toLowerCase();
     const sp = state.data.sprint;
-    const now = sprintClock(sp);
-    const days = workingDays(sp.start, sp.end);
-    const timeFrac = days.length ? elapsedWorkingDays(days, now) / days.length : 0;
+    const { now, timeFrac } = sprintTime(sp);
     return state.data.issues.filter((i) => {
       if (q && !(i.key.toLowerCase().includes(q) || i.summary.toLowerCase().includes(q) || i.labels.some((l) => l.toLowerCase().includes(q)))) return false;
       if (f.people.size && !f.people.has(i.assignee ? i.assignee.id : '__none')) return false;
@@ -1032,6 +1670,7 @@
   let heroAnimated = false;
 
   function renderHero() {
+    if (isBacklog()) return renderBacklogHero();
     const { sprint, issues, addedKeys, removedCount } = state.data;
     const now = sprintClock(sprint);
     const days = workingDays(sprint.start, sprint.end);
@@ -1123,6 +1762,64 @@
         if (line) line.style.left = timeFrac * 100 + '%';
       }));
     }
+  }
+
+  function renderBacklogHero() {
+    const { issues, truncated } = state.data;
+    const board = (state.boards.find((b) => b.id === state.boardId) || {}).name;
+    const total = sumOf(issues);
+    const unestimated = usesEstimates() ? issues.filter((i) => i.estimate == null).length : 0;
+    const unassigned = issues.filter((i) => !i.assignee).length;
+    const waiting = issues.filter((i) => waitsOnOpen(i).length).length;
+    const bugs = issues.filter((i) => i.typeKind === 'bug').length;
+
+    const meta = h('div', { class: 'sprint-meta' },
+      h('span', { class: 'sprint-name' }, 'Backlog'),
+      h('span', { class: 'state-pill' }, 'Not in a sprint'),
+      board ? h('span', null, board) : null,
+      h('span', { class: 'muted' }, truncated ? `First ${plural(issues.length, 'issue', 'issues')} by rank` : plural(issues.length, 'issue', 'issues')));
+    const headline = !issues.length ? h('h1', { class: 'goal empty' }, 'The backlog is empty')
+      : metric() === 'points' ? h('h1', { class: 'goal' }, `${fmtVal(total)} of estimated work waiting to be planned`)
+      : h('h1', { class: 'goal' }, `${plural(issues.length, 'issue', 'issues')} waiting to be planned`);
+
+    // Where the work sits: one segment per epic, largest first.
+    const byEpic = new Map();
+    for (const i of issues) {
+      const id = i.epic ? i.epic.key : '__none';
+      if (!byEpic.has(id)) byEpic.set(id, { id, name: i.epic ? i.epic.name : 'No epic', color: i.epic ? epicColor(i.epic) : 'var(--line)', v: 0, n: 0 });
+      const g = byEpic.get(id);
+      g.v += valueOf(i);
+      g.n += 1;
+    }
+    const groups = [...byEpic.values()].filter((g) => g.v > 0).sort((a, b) => (a.id === '__none') - (b.id === '__none') || b.v - a.v);
+    let bar = null;
+    if (issues.length && total > 0) {
+      bar = h('div', { class: 'epic-bar', role: 'img', 'aria-label': 'By epic: ' + groups.map((g) => `${g.name} ${fmtVal(g.v)}`).join(', ') });
+      for (const g of groups) {
+        const seg = h('div', { class: 'seg', style: `flex:${g.v} 1 0;background:${g.color}` });
+        seg.addEventListener('pointermove', (e) => showTooltip(e.clientX, e.clientY, g.name,
+          [{ key: swatch(g.color), value: fmtVal(g.v), label: `${Math.round((g.v / total) * 100)}% (${plural(g.n, 'issue', 'issues')})` }]));
+        seg.addEventListener('pointerleave', hideTooltip);
+        bar.append(seg);
+      }
+    }
+    const legend = bar ? h('div', { class: 'track-legend' }, groups.map((g) =>
+      h('span', { class: 'key' }, swatch(g.color), h('span', null, `${g.name} `, h('strong', null, fmtVal(g.v)))))) : null;
+
+    const facts = h('div', { class: 'track-legend', style: 'margin-top:18px' },
+      usesEstimates() ? h('span', { class: 'key' }, icon('ruler', unestimated ? 'tone-warning' : 'tone-good'), h('span', null, 'Not estimated ', h('strong', null, String(unestimated)))) : null,
+      h('span', { class: 'key' }, icon('user', 'tone-muted'), h('span', null, 'Unassigned ', h('strong', null, String(unassigned)))),
+      h('span', { class: 'key' }, icon('dep', waiting ? 'tone-critical' : 'tone-muted'), h('span', null, 'Waiting on other work ', h('strong', null, String(waiting)))),
+      h('span', { class: 'key' }, icon('bug', 'tone-muted'), h('span', null, 'Bugs ', h('strong', null, String(bugs)))));
+
+    const next = state.sprints.filter((sp) => sp.state === 'future').sort((a, b) => (a.start || 0) - (b.start || 0))[0];
+    const hint = issues.length && state.source.moveIssues ? h('p', { class: 'verdict' }, next
+      ? `To plan ${next.name}${next.start ? ` (starts ${fmtDay.format(next.start)})` : ''}, tick issues in the list below and move them.`
+      : 'Tick issues in the list below to move them into a sprint.') : null;
+
+    fill($('hero'), meta, headline,
+      !bar && issues.length ? h('p', { class: 'muted' }, 'Nothing here is estimated yet. Switch to Issues to see the mix by count.') : null,
+      bar, legend, facts, hint);
   }
 
   function renderVerdict(sprint, t, timeFrac) {
@@ -1256,6 +1953,7 @@
   }
 
   function renderBurndown(issues) {
+    if (isBacklog()) return;
     const panel = $('burndownPanel');
     const sprint = state.data.sprint;
     const model = burndownModel(issues, sprint);
@@ -1440,9 +2138,7 @@
   // ======================================================================
   function renderAttention(issues) {
     const sp = state.data.sprint;
-    const now = sprintClock(sp);
-    const days = workingDays(sp.start, sp.end);
-    const timeFrac = days.length ? elapsedWorkingDays(days, now) / days.length : 0;
+    const { now, timeFrac } = sprintTime(sp);
     const items = issues.map((i) => ({ issue: i, reasons: attentionReasons(i, sp, timeFrac, now) }))
       .filter((x) => x.reasons.length)
       .sort((a, b) => Math.max(...b.reasons.map((r) => r.rank)) - Math.max(...a.reasons.map((r) => r.rank)) || b.issue.priorityRank - a.issue.priorityRank);
@@ -1456,7 +2152,7 @@
 
     fill($('attentionPanel'), 
       h('div', { class: 'panel-head' }, h('h2', null, 'Needs attention'), h('span', { class: 'muted num' }, items.length ? String(items.length) : '')),
-      h('p', { class: 'sub' }, 'Blocked, stalled, unassigned or unestimated work'),
+      h('p', { class: 'sub' }, 'Blocked, waiting, stalled, unassigned or unestimated work'),
       items.length ? list : h('p', { class: 'empty-note' }, sp.state === 'future' ? 'Nothing flagged in the plan.' : 'Nothing needs attention right now.'));
   }
 
@@ -1481,6 +2177,22 @@
       : h('span', { class: 'avatar none ' + cls, title: 'Unassigned' }, icon('user'));
   }
 
+  function depLines(issue) {
+    if (issue.category === 'done' || !issue.links.length) return null;
+    const waits = issue.links.filter((l) => l.kind === 'waitsOn').map(resolveLink);
+    const open = waits.filter((l) => l.category !== 'done');
+    const blocks = issue.links.filter((l) => l.kind === 'blocks').map(resolveLink).filter((l) => l.category !== 'done');
+    const describe = (list) => list.map((l) => `${l.key} (${l.status})`).join(', ');
+    return [
+      open.length ? h('span', { class: 'dep-line', title: `Waits on ${describe(open)}` }, icon('dep', 'tone-critical'),
+        h('span', null, 'Waits on ', h('strong', null, keyList(open)))) : null,
+      !open.length && waits.length ? h('span', { class: 'dep-line', title: `Finished: ${describe(waits)}` }, icon('check', 'tone-good'),
+        h('span', null, waits.length === 1 ? 'Dependency finished' : 'Dependencies finished')) : null,
+      blocks.length ? h('span', { class: 'dep-line', title: `${describe(blocks)} wait on this` }, icon('dep', 'tone-muted'),
+        h('span', null, 'Blocks ', h('strong', null, keyList(blocks)))) : null,
+    ];
+  }
+
   function card(issue) {
     const done = issue.subtasks.filter((st) => st.done).length;
     return h('button', {
@@ -1495,6 +2207,7 @@
         priorityIcon(issue)),
       h('div', { class: 'card-summary' }, issue.summary),
       isBlocked(issue) ? h('span', { class: 'blocked-label' }, icon('flag'), issue.flagged ? 'Blocked' : issue.status) : null,
+      depLines(issue),
       issue.epic ? h('span', { class: 'epic-tag' }, h('span', { class: 'dot', style: `background:${epicColor(issue.epic)}` }), h('span', null, issue.epic.name)) : null,
       h('div', { class: 'card-foot' },
         avatar(issue.assignee),
@@ -1525,17 +2238,254 @@
 
   function renderBoardSection(issues) {
     const section = $('boardSection');
+    const viewKey = isBacklog() ? 'backlogView' : 'view';
+    const view = prefs[viewKey] || (isBacklog() ? 'list' : 'board');
     const viewToggle = h('div', { class: 'segmented', role: 'group', 'aria-label': 'View' },
-      ['board', 'list'].map((v) => h('button', { type: 'button', 'aria-pressed': String(prefs.view === v),
-        onclick: () => { prefs.view = v; savePrefs(); renderBoardSection(filteredIssues()); } }, v === 'board' ? 'Board' : 'List')));
-    const lanes = prefs.view === 'board' ? h('select', { class: 'select', 'aria-label': 'Swimlanes',
+      [['board', 'Board'], ['list', 'List'], ['deps', 'Dependencies']].map(([v, label]) => h('button', { type: 'button', 'aria-pressed': String(view === v),
+        onclick: () => { prefs[viewKey] = v; savePrefs(); renderBoardSection(filteredIssues()); } }, label)));
+    const lanes = view === 'board' ? h('select', { class: 'select', 'aria-label': 'Swimlanes',
       onchange: (e) => { prefs.lanes = e.target.value; savePrefs(); renderBoardSection(filteredIssues()); } },
       [['none', 'No swimlanes'], ['assignee', 'Swimlanes by assignee'], ['epic', 'Swimlanes by epic']]
         .map(([v, label]) => h('option', { value: v, selected: prefs.lanes === v }, label))) : null;
 
     fill(section, 
-      h('div', { class: 'section-head' }, h('h2', null, prefs.view === 'board' ? 'Board' : 'Issues'), lanes, viewToggle),
-      prefs.view === 'board' ? boardView(issues) : listView(issues));
+      h('div', { class: 'section-head' }, h('h2', null, isBacklog() && view === 'list' ? 'Backlog' : { board: 'Board', list: 'Issues', deps: 'Dependencies' }[view] || 'Board'), lanes, viewToggle),
+      view === 'list' ? listView(issues) : view === 'deps' ? depsView(issues) : boardView(issues));
+  }
+
+  // ======================================================================
+  // Dependencies: a left-to-right map. Each arrow runs from the work that has
+  // to finish first to the work that waits on it.
+  // ======================================================================
+  const NODE = { w: 236, h: 84, gx: 64, gy: 14, gap: 36 };
+
+  function dependencyGraph(issues) {
+    const nodes = new Map();
+    const edges = new Map();
+    const node = (key, link) => {
+      if (!nodes.has(key)) {
+        const issue = state.data.byKey.get(key);
+        nodes.set(key, issue ? { key, issue } : { key, link, external: true });
+      }
+    };
+    for (const i of issues) {
+      for (const l of i.links) {
+        if (l.kind === 'related') continue;
+        const [from, to] = l.kind === 'waitsOn' ? [l.key, i.key] : [i.key, l.key];
+        if (from === to || edges.has(from + '>' + to)) continue;
+        node(i.key); node(l.key, l);
+        edges.set(from + '>' + to, { id: from + '>' + to, from, to });
+      }
+    }
+    const info = (n) => n.issue || n.link;
+    for (const e of edges.values()) e.open = info(nodes.get(e.from)).category !== 'done';
+    return { nodes, edges: [...edges.values()], info };
+  }
+
+  function layoutGraph(g) {
+    const keys = [...g.nodes.keys()];
+    const preds = new Map(keys.map((k) => [k, []]));
+    const succs = new Map(keys.map((k) => [k, []]));
+    for (const e of g.edges) { succs.get(e.from).push(e.to); preds.get(e.to).push(e.from); }
+    // Column = length of the longest chain of prerequisites (bounded, so cycles can't loop forever).
+    const level = new Map(keys.map((k) => [k, 0]));
+    for (let it = 0; it < keys.length; it++) {
+      let changed = false;
+      for (const e of g.edges) {
+        const want = level.get(e.from) + 1;
+        if (want > level.get(e.to) && want < keys.length) { level.set(e.to, want); changed = true; }
+      }
+      if (!changed) break;
+    }
+    // An arrow that skips columns gets a waypoint in each column it crosses, so it
+    // runs through a gap between cards instead of behind one.
+    const P = new Map(keys.map((k) => [k, []]));
+    const S = new Map(keys.map((k) => [k, []]));
+    const lv = new Map(level);
+    const chains = new Map();
+    for (const e of g.edges) {
+      const a = level.get(e.from), b = level.get(e.to);
+      const chain = [e.from];
+      for (let l = a + 1; l < b; l++) {
+        const d = `~${e.id}~${l}`;
+        lv.set(d, l); P.set(d, []); S.set(d, []);
+        chain.push(d);
+      }
+      chain.push(e.to);
+      for (let n = 1; n < chain.length; n++) { S.get(chain[n - 1]).push(chain[n]); P.get(chain[n]).push(chain[n - 1]); }
+      chains.set(e.id, chain);
+    }
+    const isWay = (k) => k.startsWith('~');
+    const sizeOf = (k) => (isWay(k) ? 12 : NODE.h);
+
+    // Separate chains that don't touch each other into their own bands.
+    const rank = new Map(state.data.issues.map((i, n) => [i.key, n]));
+    const order = (k) => (rank.has(k) ? rank.get(k) : 1e6 + k.length);
+    const comps = [];
+    const seen = new Set();
+    for (const k of [...keys].sort((a, b) => order(a) - order(b))) {
+      if (seen.has(k)) continue;
+      const comp = [];
+      const stack = [k];
+      seen.add(k);
+      while (stack.length) {
+        const c = stack.pop();
+        comp.push(c);
+        for (const n of [...P.get(c), ...S.get(c)]) if (!seen.has(n)) { seen.add(n); stack.push(n); }
+      }
+      comps.push(comp);
+    }
+    comps.sort((a, b) => b.filter((k) => !isWay(k)).length - a.filter((k) => !isWay(k)).length);
+
+    const pos = new Map();
+    let top = 0, maxLevel = 0;
+    for (const comp of comps) {
+      const cols = [];
+      for (const k of comp) (cols[lv.get(k)] = cols[lv.get(k)] || []).push(k);
+      const filled = Array.from({ length: cols.length }, (_, c) => cols[c] || []);
+      filled.forEach((c) => c.sort((a, b) => order(a) - order(b)));
+      // Order each column by where its neighbours sit, to cut down crossing arrows.
+      const idx = new Map();
+      const index = () => filled.forEach((c) => c.forEach((k, n) => idx.set(k, n)));
+      index();
+      const bary = (k, nbrs) => { const ns = nbrs.get(k); return ns.length ? ns.reduce((t, n) => t + idx.get(n), 0) / ns.length : idx.get(k); };
+      for (let pass = 0; pass < 3; pass++) {
+        for (let c = 1; c < filled.length; c++) { filled[c].sort((a, b) => bary(a, P) - bary(b, P)); index(); }
+        for (let c = filled.length - 2; c >= 0; c--) { filled[c].sort((a, b) => bary(a, S) - bary(b, S)); index(); }
+      }
+      const colH = (c) => c.reduce((t, k) => t + sizeOf(k), 0) + Math.max(0, c.length - 1) * NODE.gy;
+      const bandH = Math.max(...filled.map(colH));
+      filled.forEach((c, l) => {
+        let y = top + (bandH - colH(c)) / 2;
+        for (const k of c) { pos.set(k, { x: l * (NODE.w + NODE.gx), y, h: sizeOf(k) }); y += sizeOf(k) + NODE.gy; }
+        maxLevel = Math.max(maxLevel, l);
+      });
+      top += bandH + NODE.gap;
+    }
+    // Each arrow as a list of points: out of the source, across each waypoint, into the target.
+    const routes = new Map();
+    for (const [id, chain] of chains) {
+      const pts = [];
+      chain.forEach((k, n) => {
+        const p = pos.get(k);
+        const cy = p.y + p.h / 2;
+        if (n === 0) pts.push([p.x + NODE.w, cy]);
+        else if (n === chain.length - 1) pts.push([p.x - 2, cy]);
+        else pts.push([p.x, cy], [p.x + NODE.w, cy]);
+      });
+      routes.set(id, pts);
+    }
+    return { pos, preds, succs, routes, width: (maxLevel + 1) * (NODE.w + NODE.gx) - NODE.gx, height: Math.max(0, top - NODE.gap) };
+  }
+
+  function depsView(issues) {
+    const g = dependencyGraph(issues);
+    if (!g.edges.length) {
+      return h('p', { class: 'empty-note' }, filtersActive()
+        ? 'None of the filtered issues have dependencies.'
+        : `No dependencies in ${isBacklog() ? 'the backlog' : 'this sprint'}. Link issues in Jira with "blocks" or "is blocked by" to see them here.`);
+    }
+    const L = layoutGraph(g);
+    const waiting = issues.filter((i) => waitsOnOpen(i).length);
+    const outside = [...g.nodes.values()].filter((n) => n.external);
+    let longest = 0;
+    const depth = new Map();
+    const chain = (k, guard = 0) => {
+      if (depth.has(k)) return depth.get(k);
+      if (guard > 200) return 1;
+      const d = 1 + Math.max(0, ...L.preds.get(k).map((p) => chain(p, guard + 1)));
+      depth.set(k, d);
+      return d;
+    };
+    for (const k of g.nodes.keys()) longest = Math.max(longest, chain(k));
+
+    const summary = h('div', { class: 'dep-summary' },
+      h('span', { class: 'key' }, icon('dep', waiting.length ? 'tone-critical' : 'tone-good'),
+        h('span', null, h('strong', null, plural(waiting.length, 'issue', 'issues')), ' waiting on unfinished work')),
+      outside.length ? h('span', { class: 'key' }, h('span', { class: 'swatch', style: 'border:1px dashed var(--ink-2)' }),
+        h('span', null, h('strong', null, String(outside.length)), ` linked ${outside.length === 1 ? 'issue' : 'issues'} outside ${isBacklog() ? 'the backlog' : 'this sprint'}`)) : null,
+      longest >= 3 ? h('span', { class: 'key' }, h('span', null, 'Longest chain ', h('strong', null, plural(longest, 'issue', 'issues')))) : null);
+    const legend = h('div', { class: 'legend' },
+      h('span', { class: 'key' }, lineKey('var(--critical)'), 'Still blocking'),
+      h('span', { class: 'key' }, h('span', { class: 'line-key', style: 'background:repeating-linear-gradient(90deg,var(--muted) 0 4px,transparent 4px 7px)' }), 'Finished'),
+      h('span', { class: 'muted' }, 'Arrows point from the work that must finish first. Hover an issue to trace its chain.'));
+
+    const map = h('div', { class: 'depmap', style: `width:${L.width}px;height:${L.height}px` });
+    const svg = s('svg', { class: 'edges', width: L.width, height: L.height, 'aria-hidden': 'true' },
+      s('defs', null, ...[['open', 'var(--critical)'], ['done', 'var(--muted)']].map(([id, color]) =>
+        s('marker', { id: 'arrow-' + id, viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: 'auto-start-reverse' },
+          s('path', { d: 'M0 0L10 5L0 10z', fill: color })))));
+    const edgeEls = new Map();
+    for (const e of g.edges) {
+      const pts = L.routes.get(e.id);
+      let d = `M${pts[0][0]} ${pts[0][1]}`;
+      for (let n = 1; n < pts.length; n++) {
+        const [x1, y1] = pts[n - 1], [x2, y2] = pts[n];
+        if (y1 === y2) { d += `L${x2} ${y2}`; continue; }
+        const bend = Math.max(24, (x2 - x1) / 2);
+        d += `C${x1 + bend} ${y1} ${x2 - bend} ${y2} ${x2} ${y2}`;
+      }
+      const path = s('path', {
+        class: 'edge', d, fill: 'none',
+        stroke: e.open ? 'var(--critical)' : 'var(--muted)', 'stroke-width': e.open ? 2 : 1.5,
+        'stroke-dasharray': e.open ? null : '4 3', 'marker-end': `url(#arrow-${e.open ? 'open' : 'done'})`,
+      });
+      edgeEls.set(e.id, path);
+      svg.append(path);
+    }
+    map.append(svg);
+
+    // Highlight everything upstream and downstream of the hovered issue.
+    const nodeEls = new Map();
+    const reach = (k, nbrs, out) => { for (const n of nbrs.get(k)) if (!out.has(n)) { out.add(n); reach(n, nbrs, out); } return out; };
+    const light = (k) => {
+      const set = new Set([k, ...reach(k, L.preds, new Set()), ...reach(k, L.succs, new Set())]);
+      map.classList.add('focus');
+      nodeEls.forEach((el, key) => el.classList.toggle('lit', set.has(key)));
+      for (const e of g.edges) edgeEls.get(e.id).classList.toggle('lit', set.has(e.from) && set.has(e.to));
+    };
+    const unlight = () => map.classList.remove('focus');
+
+    for (const [key, n] of g.nodes) {
+      const p = L.pos.get(key);
+      const it = g.info(n);
+      const waitingHere = n.issue && waitsOnOpen(n.issue).length;
+      const ups = L.preds.get(key).length, downs = L.succs.get(key).length;
+      const label = `${key}: ${it.summary}. ${it.status}.` + (n.external ? ' Not in this sprint.' : '') +
+        (ups ? ` Waits on ${L.preds.get(key).join(', ')}.` : '') + (downs ? ` Blocks ${L.succs.get(key).join(', ')}.` : '');
+      const props = {
+        class: 'dep-node' + (n.external ? ' external' : '') + (waitingHere ? ' waiting' : ''),
+        style: `left:${p.x}px;top:${p.y}px`, 'aria-label': label, title: n.external ? 'Not in this sprint' : null,
+        onpointerenter: () => light(key), onpointerleave: unlight, onfocus: () => light(key), onblur: unlight,
+      };
+      let el;
+      if (n.issue) el = h('button', { ...props, type: 'button', onclick: (e) => openDrawer(n.issue, e.currentTarget) });
+      else if (it.url) el = h('a', { ...props, href: it.url, target: '_blank', rel: 'noopener noreferrer' });
+      else el = h('div', { ...props, tabindex: 0 });
+      append(el, [
+        h('div', { class: 'card-top' },
+          h('span', { style: `color:var(--type-${it.typeKind})`, title: it.type }, icon(it.typeKind)),
+          h('span', null, key),
+          h('span', { class: 'node-status' }, swatch(`var(--st-${it.category})`), h('span', null, it.status))),
+        h('div', { class: 'node-summary' }, it.summary),
+      ]);
+      nodeEls.set(key, el);
+      map.append(el);
+    }
+
+    const rows = g.edges.map((e) => ({ e, from: g.info(g.nodes.get(e.from)), to: g.info(g.nodes.get(e.to)) }))
+      .sort((a, b) => b.e.open - a.e.open || a.e.to.localeCompare(b.e.to));
+    const table = h('details', { class: 'data-table' },
+      h('summary', null, 'Show as table'),
+      h('table', { class: 'mini-table' },
+        h('thead', null, h('tr', null, h('th', null, 'Issue'), h('th', null, 'Waits on'), h('th', null, 'Its status'), h('th', null, 'Blocking now'))),
+        h('tbody', null, rows.map(({ e, from, to }) => h('tr', null,
+          h('td', null, `${e.to}  ${to.summary}`),
+          h('td', null, `${e.from}  ${from.summary}` + (g.nodes.get(e.from).external ? ' (outside sprint)' : '')),
+          h('td', null, from.status),
+          h('td', null, e.open ? 'Yes' : 'No'))))));
+
+    return h('div', null, summary, legend, h('div', { class: 'depmap-scroll' }, map), table);
   }
 
   function boardView(issues) {
@@ -1599,7 +2549,7 @@
       laneEl.append(cells);
       board.append(laneEl);
     }
-    if (!issues.length) board.append(h('p', { class: 'empty-note' }, filtersActive() ? 'No issues match the filters.' : 'This sprint has no issues.'));
+    if (!issues.length) board.append(h('p', { class: 'empty-note' }, filtersActive() ? 'No issues match the filters.' : isBacklog() ? 'The backlog is empty.' : 'This sprint has no issues.'));
     return h('div', { class: 'board-scroll' }, board);
   }
 
@@ -1621,20 +2571,244 @@
       const x = col.get(a), y = col.get(b);
       return (x < y ? -1 : x > y ? 1 : 0) * state.sort.dir;
     });
+    const movable = canMove();
+    const sel = state.selected;
+    const bar = movable ? moveBar() : null;
+    const pickAll = movable ? h('input', { type: 'checkbox', 'aria-label': 'Select all shown issues' }) : null;
+    const syncAll = () => {
+      if (!pickAll) return;
+      const n = rows.filter((i) => sel.has(i.key)).length;
+      pickAll.checked = n > 0 && n === rows.length;
+      pickAll.indeterminate = n > 0 && n < rows.length;
+    };
+    const boxes = new Map();
+    if (pickAll) {
+      pickAll.addEventListener('change', () => {
+        rows.forEach((i) => { pickAll.checked ? sel.add(i.key) : sel.delete(i.key); boxes.get(i.key).checked = pickAll.checked; });
+        bar.refresh();
+      });
+    }
+    const pickCell = (i) => {
+      const box = h('input', { type: 'checkbox', checked: sel.has(i.key), 'aria-label': `Select ${i.key}` });
+      box.addEventListener('click', (e) => e.stopPropagation());
+      box.addEventListener('keydown', (e) => e.stopPropagation());
+      box.addEventListener('change', () => { box.checked ? sel.add(i.key) : sel.delete(i.key); syncAll(); bar.refresh(); });
+      boxes.set(i.key, box);
+      return h('td', { class: 'pick' }, box);
+    };
     const table = h('table', { class: 'issues' },
-      h('thead', null, h('tr', null, columns.map((c) => h('th', {
+      h('thead', null, h('tr', null, movable ? h('th', { class: 'pick' }, pickAll) : null, columns.map((c) => h('th', {
         class: c.r ? 'r' : null, 'aria-sort': state.sort.key === c.key ? (state.sort.dir > 0 ? 'ascending' : 'descending') : null,
       }, h('button', { type: 'button', onclick: () => {
         state.sort = { key: c.key, dir: state.sort.key === c.key ? -state.sort.dir : 1 };
         renderBoardSection(filteredIssues());
       } }, c.label, icon('sort')))))),
       h('tbody', null, rows.map((i) => {
-        const tr = h('tr', { tabindex: 0, 'aria-label': `${i.key}: ${i.summary}` }, columns.map((c) => h('td', { class: [c.cls, c.r ? 'r' : ''].filter(Boolean).join(' ') || null }, c.cell(i))));
+        const tr = h('tr', { tabindex: 0, 'aria-label': `${i.key}: ${i.summary}` }, movable ? pickCell(i) : null,
+          columns.map((c) => h('td', { class: [c.cls, c.r ? 'r' : ''].filter(Boolean).join(' ') || null }, c.cell(i))));
         tr.addEventListener('click', () => openDrawer(i, tr));
         tr.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDrawer(i, tr); } });
         return tr;
       })));
-    return issues.length ? h('div', { class: 'table-wrap' }, table) : h('p', { class: 'empty-note' }, 'No issues match the filters.');
+    syncAll();
+    if (!issues.length) return h('p', { class: 'empty-note' }, filtersActive() ? 'No issues match the filters.' : isBacklog() ? 'The backlog is empty.' : 'This sprint has no issues.');
+    return h('div', null, h('div', { class: 'table-wrap' }, table), bar);
+  }
+
+  // ======================================================================
+  // Moving issues between sprints and the backlog
+  // ======================================================================
+  const canMove = () => !!(state.source && state.source.moveIssues && state.data && state.data.sprint.state !== 'closed' && moveTargets().length);
+  // Upcoming sprints first (the usual planning move), then the active one, then the backlog.
+  function moveTargets() {
+    const cur = state.data.sprint;
+    const order = { future: 0, active: 1 };
+    const list = state.sprints.filter((sp) => sp.state !== 'closed' && sp.id !== cur.id)
+      .sort((a, b) => order[a.state] - order[b.state] || (a.start || 0) - (b.start || 0))
+      .map((sp) => ({ id: sp.id, label: sprintOptionLabel(sp), name: sp.name, state: sp.state }));
+    if (cur.state !== BACKLOG) list.push({ id: BACKLOG, label: 'Backlog', name: 'the backlog', state: BACKLOG });
+    return list;
+  }
+  function targetSelect() {
+    const targets = moveTargets();
+    return h('select', { class: 'select', 'aria-label': 'Move to' }, targets.map((t) => h('option', { value: String(t.id) }, t.label)));
+  }
+  const scopeNote = (value) => (moveTargets().find((t) => String(t.id) === value) || {}).state === 'active' ? 'Adds scope to the sprint in progress.' : '';
+
+  // The bar under a list selection: move the issues, or set epic, points,
+  // assignee and priority on all of them at once.
+  function moveBar() {
+    const sel = state.selected;
+    const select = targetSelect();
+    const note = h('span', { class: 'muted' }, scopeNote(select.value));
+    select.addEventListener('change', () => { note.textContent = scopeNote(select.value); });
+    const count = h('strong');
+    const size = h('span', { class: 'muted' });
+    const moveBtn = h('button', { type: 'button', class: 'btn primary' }, 'Move');
+    moveBtn.addEventListener('click', () => moveIssues([...sel].filter((k) => state.data.byKey.has(k)), select.value, moveBtn));
+
+    // "Set" row. Every control starts at "no change"; only touched fields are written.
+    const KEEP = '__keep';
+    const epicSel = h('select', { class: 'select', 'aria-label': 'Epic for selected issues', disabled: true }, h('option', { value: KEEP }, 'Epic: no change'));
+    const assigneeSel = h('select', { class: 'select', 'aria-label': 'Assignee for selected issues', disabled: true }, h('option', { value: KEEP }, 'Assignee: no change'));
+    const prioritySel = h('select', { class: 'select', 'aria-label': 'Priority for selected issues', disabled: true }, h('option', { value: KEEP }, 'Priority: no change'));
+    const pointsIn = usesEstimates() ? h('input', { class: 'input points-in', type: 'number', min: 0, step: 'any', inputmode: 'decimal',
+      placeholder: state.config.estimate.unit === 'h' ? 'Hours: no change' : 'Points: no change',
+      'aria-label': state.config.estimate.unit === 'h' ? 'Estimate in hours for selected issues' : 'Story points for selected issues' }) : null;
+    const applyBtn = h('button', { type: 'button', class: 'btn', disabled: true }, 'Apply');
+    const progress = h('span', { class: 'muted', 'aria-live': 'polite' });
+    const chosen = () => ({
+      epic: epicSel.value !== KEEP ? epicSel.value : undefined,
+      assignee: assigneeSel.value !== KEEP ? assigneeSel.value : undefined,
+      priority: prioritySel.value !== KEEP ? prioritySel.value : undefined,
+      points: pointsIn && pointsIn.value.trim() !== '' ? pointsIn.value.trim() : undefined,
+    });
+    const syncApply = () => {
+      const c = chosen();
+      const n = [...sel].filter((k) => state.data.byKey.has(k)).length;
+      applyBtn.disabled = Object.values(c).every((v) => v === undefined);
+      applyBtn.textContent = `Apply to ${plural(n, 'issue', 'issues')}`;
+    };
+    for (const el of [epicSel, assigneeSel, prioritySel]) el.addEventListener('change', syncApply);
+    if (pointsIn) {
+      pointsIn.addEventListener('input', syncApply);
+      pointsIn.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !applyBtn.disabled) applyBtn.click(); });
+    }
+
+    let lookups = null;
+    loadBulkLookups().then((l) => {
+      lookups = l;
+      append(epicSel, [h('option', { value: '' }, 'No epic'), l.epics.map((e) => h('option', { value: e.key }, e.name))]);
+      append(assigneeSel, [h('option', { value: '' }, 'Unassigned'), l.users.map((u) => h('option', { value: u.id }, u.isMe ? `${u.name} (you)` : u.name))]);
+      append(prioritySel, l.priorities.map((p) => h('option', { value: p.id }, p.name)));
+      epicSel.disabled = assigneeSel.disabled = false;
+      prioritySel.disabled = !l.priorities.length;
+    }).catch((err) => { progress.textContent = `Couldn't load epics and people: ${err.message}`; });
+
+    applyBtn.addEventListener('click', () => {
+      const c = chosen();
+      if (c.points !== undefined) {
+        const v = Number(c.points);
+        if (!isFinite(v) || v < 0) { progress.textContent = 'Points have to be a number of 0 or more.'; pointsIn.focus(); return; }
+        c.points = v;
+      }
+      const issues = state.data.issues.filter((i) => sel.has(i.key));
+      bulkUpdate(issues, c, lookups, { applyBtn, progress, controls: [epicSel, assigneeSel, prioritySel, pointsIn, moveBtn].filter(Boolean) });
+    });
+
+    const bar = h('div', { class: 'move-bar', role: 'region', 'aria-label': 'Selected issues' },
+      h('div', { class: 'bar-row' },
+        count, usesEstimates() ? size : null,
+        h('label', { class: 'move-to' }, 'Move to', select), moveBtn, note,
+        h('button', { type: 'button', class: 'linklike', onclick: () => { sel.clear(); renderBoardSection(filteredIssues()); } }, 'Clear selection')),
+      h('div', { class: 'bar-row bulk-row' },
+        h('span', { class: 'bar-label' }, 'Set'), epicSel, pointsIn, assigneeSel, prioritySel, applyBtn, progress));
+    bar.refresh = () => {
+      const picked = state.data.issues.filter((i) => sel.has(i.key));
+      bar.hidden = !picked.length;
+      count.textContent = `${plural(picked.length, 'issue', 'issues')} selected`;
+      if (usesEstimates()) size.textContent = fmtVal(sumOf(picked));
+      syncApply();
+    };
+    bar.refresh();
+    return bar;
+  }
+
+  // Epics and people come from the board; priorities from what Jira allows on
+  // one of the board's issues (priority schemes are per project).
+  async function loadBulkLookups() {
+    const meta = await boardMeta();
+    if (!meta.priorities) {
+      const sample = state.data.issues[0];
+      meta.priorities = sample ? (await state.source.editInfo(sample).catch(() => ({ priorities: [] }))).priorities : [];
+    }
+    const users = [...meta.users].sort((a, b) => (b.isMe || false) - (a.isMe || false) || a.name.localeCompare(b.name));
+    return { epics: meta.epics, users, priorities: meta.priorities };
+  }
+
+  // Runs each change on each issue (a few at a time), then reports what failed.
+  async function bulkUpdate(issues, c, lookups, ui) {
+    const keys = issues.map((i) => i.key);
+    const epic = c.epic === undefined ? undefined : c.epic ? lookups.epics.find((e) => e.key === c.epic) : null;
+    const user = c.assignee === undefined ? undefined : c.assignee ? lookups.users.find((u) => u.id === c.assignee) : null;
+    const prio = c.priority === undefined ? undefined : lookups.priorities.find((p) => p.id === c.priority);
+    const problems = [];
+    const what = [];
+    ui.applyBtn.disabled = true;
+    ui.controls.forEach((el) => { el.disabled = true; });
+
+    // Epic: one call per 50 issues.
+    if (epic !== undefined) {
+      what.push('epic');
+      ui.progress.textContent = 'Setting the epic…';
+      for (let n = 0; n < keys.length; n += 50) {
+        const chunk = keys.slice(n, n + 50);
+        try {
+          await state.source.setEpicMany(chunk, epic ? epic.key : null);
+          for (const i of issues) if (chunk.includes(i.key)) i.epic = epic ? { key: epic.key, name: epic.name } : null;
+        } catch (err) { problems.push(`Epic for ${chunk.length === 1 ? chunk[0] : `${chunk.length} issues`}: ${err.message}`); }
+      }
+    }
+    // Points, assignee and priority: one call per issue each.
+    const jobs = [];
+    if (c.points !== undefined) {
+      what.push(state.config.estimate.unit === 'h' ? 'estimate' : 'points');
+      for (const i of issues) jobs.push([i, 'points', () => state.source.setEstimate(i.key, c.points, { boardId: state.boardId, unit: state.config.estimate.unit }), () => { i.estimate = c.points; }]);
+    }
+    if (user !== undefined) {
+      what.push('assignee');
+      for (const i of issues) jobs.push([i, 'assignee', () => state.source.assign(i.key, user),
+        () => { i.assignee = user ? { id: user.id, name: user.name, accountId: user.accountId || null, username: user.username || null } : null; }]);
+    }
+    if (prio) {
+      what.push('priority');
+      for (const i of issues) jobs.push([i, 'priority', () => state.source.updateFields(i.key, { priority: { id: prio.id } }),
+        () => { i.priority = prio.name; i.priorityRank = PRIORITY_RANKS[prio.name.toLowerCase()] || 3; }]);
+    }
+    let finished = 0;
+    let next = 0;
+    const worker = async () => {
+      while (next < jobs.length) {
+        const [issue, field, run, apply] = jobs[next++];
+        try { await run(); apply(); issue.updated = new Date(); } catch (err) { problems.push(`${issue.key} ${field}: ${err.message}`); }
+        finished += 1;
+        ui.progress.textContent = `Updating ${finished} of ${jobs.length}…`;
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(4, jobs.length) }, worker));
+
+    const list = what.join(', ').replace(/, ([^,]*)$/, ' and $1');
+    showToast(problems.length ? `Updated ${list} on ${plural(issues.length, 'issue', 'issues')}, with problems:` : `Updated ${list} on ${plural(issues.length, 'issue', 'issues')}.`,
+      { details: problems.slice(0, 8).concat(problems.length > 8 ? [`and ${problems.length - 8} more`] : []), sticky: problems.length > 0 });
+    // Keep the selection so the same issues can be moved next.
+    afterEdit();
+  }
+
+  async function moveIssues(keys, value, btn) {
+    if (!keys.length) return;
+    const target = value === BACKLOG ? BACKLOG : Number(value);
+    const t = moveTargets().find((x) => x.id === target);
+    const label = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Moving…';
+    try {
+      await state.source.moveIssues(keys, target);
+    } catch (err) {
+      showToast(`Couldn't move ${keys.length === 1 ? keys[0] : 'the issues'}: ${err.message}`, { sticky: true });
+      btn.disabled = false;
+      btn.textContent = label;
+      return;
+    }
+    state.selected.clear();
+    closeDrawer();
+    state.mine = null;
+    refreshMine().catch(() => { /* the tab shows the error when opened */ });
+    const what = keys.length === 1 ? keys[0] : plural(keys.length, 'issue', 'issues');
+    const go = { label: target === BACKLOG ? 'Open the backlog' : `Open ${t.name}`, run: () => selectSprint(target) };
+    showToast(`Moved ${what} to ${t.name}.`, { action: go });
+    // Jira's search index can lag a moment behind a move.
+    if (state.source.kind === 'live') await new Promise((r) => setTimeout(r, 800));
+    await selectSprint(state.sprintId);
   }
 
   // ======================================================================
@@ -1644,52 +2818,350 @@
   const scrim = $('scrim');
   let drawerReturnFocus = null;
 
-  function openDrawer(issue, from) {
-    drawerReturnFocus = from || null;
+  function linkSections(issue) {
+    if (!issue.links.length) return null;
+    const groups = [
+      ['Waits on', issue.links.filter((l) => l.kind === 'waitsOn')],
+      ['Blocks', issue.links.filter((l) => l.kind === 'blocks')],
+      ['Other links', issue.links.filter((l) => l.kind === 'related')],
+    ].filter(([, list]) => list.length);
+    const item = (raw, showPhrase) => {
+      const l = resolveLink(raw);
+      const kids = [
+        h('span', { style: `color:var(--type-${l.typeKind})`, title: l.type }, icon(l.typeKind)),
+        h('span', { class: 'status-chip st' }, swatch(`var(--st-${l.category})`), l.status),
+        h('span', { class: 'what' }, showPhrase ? `${l.phrase} ` : '', h('strong', null, l.key), '  ', l.summary),
+      ];
+      if (l.issue) return h('li', null, h('button', { type: 'button', class: 'link-item', onclick: () => openDrawer(l.issue) }, kids));
+      if (l.url) return h('li', null, h('a', { class: 'link-item', href: l.url, target: '_blank', rel: 'noopener noreferrer', title: 'Not in this sprint. Opens in Jira.' }, kids));
+      return h('li', null, h('div', { class: 'link-item', title: 'Not in this sprint' }, kids));
+    };
+    return [
+      h('h3', null, 'Dependencies'),
+      groups.map(([label, list]) => [
+        h('div', { class: 'links-label' }, label === 'Waits on' && list.some((l) => resolveLink(l).category !== 'done') && issue.category !== 'done'
+          ? `${label}: ${list.filter((l) => resolveLink(l).category !== 'done').length} not finished` : label),
+        h('ul', { class: 'links' }, list.map((l) => item(l, label === 'Other links'))),
+      ]),
+    ];
+  }
+
+  function sprintFact(issue) {
+    const here = isBacklog() ? 'Backlog' : state.data.sprint.name;
+    if (!canMove()) return [here];
+    const select = targetSelect();
+    const btn = h('button', { type: 'button', class: 'btn' }, 'Move');
+    btn.addEventListener('click', () => moveIssues([issue.key], select.value, btn));
+    return [h('span', null, here), h('span', { class: 'move-inline' }, h('span', { class: 'muted' }, 'move to'), select, btn)];
+  }
+
+  // Issues on the loaded board can be edited in place; others (My work from other
+  // boards, linked issues) are read-only with a link to Jira.
+  const canEdit = (issue) => !!(state.source && state.source.editInfo && state.data && state.data.byKey.get(issue.key) === issue);
+  let drawerToken = null;
+
+  async function boardMeta() {
+    if (state.createMeta && state.createMeta.boardId === state.boardId) return state.createMeta;
+    const meta = { boardId: state.boardId, ...(await state.source.createMeta(state.boardId)) };
+    state.createMeta = meta;
+    return meta;
+  }
+
+  // opts.focus / opts.saved: a field to focus and mark "Saved" after a re-render.
+  function openDrawer(issue, from, opts = {}) {
+    if (drawer.hidden) drawerReturnFocus = from || null;
+    const token = drawerToken = {};
+    const keepScroll = drawer.hidden ? 0 : drawer.scrollTop;
+    const editable = canEdit(issue);
+    renderDrawer(issue, null, editable, opts);
+    drawer.hidden = false;
+    scrim.hidden = false;
+    drawer.scrollTop = keepScroll;
+    requestAnimationFrame(() => drawer.classList.remove('closed'));
+    if (!opts.focus) drawer.querySelector('.drawer-top .btn').focus();
+    if (!editable) return;
+    Promise.all([state.source.editInfo(issue), boardMeta()]).then(([info, meta]) => {
+      if (drawerToken !== token || drawer.hidden) return;
+      const scroll = drawer.scrollTop;
+      const closeHadFocus = document.activeElement === drawer.querySelector('.drawer-top .btn');
+      renderDrawer(issue, { info, meta }, true, opts);
+      drawer.scrollTop = scroll;
+      const target = opts.focus && drawer.querySelector(`[data-field="${opts.focus}"]`);
+      if (target) target.focus();
+      else if (closeHadFocus || !drawer.contains(document.activeElement)) drawer.querySelector('.drawer-top .btn').focus();
+    }).catch((err) => {
+      if (drawerToken !== token) return;
+      const note = drawer.querySelector('.edit-note');
+      if (note) note.textContent = `Editing isn't available: ${err.message}`;
+    });
+  }
+
+  function renderDrawer(issue, edit, editable, opts) {
     const done = issue.subtasks.filter((st) => st.done).length;
     const fact = (label, ...value) => [h('dt', null, label), h('dd', null, ...value)];
     const fmt = (d) => (d ? fmtDateTime.format(d) : '–');
     const closeBtn = h('button', { type: 'button', class: 'btn', onclick: closeDrawer, 'aria-label': 'Close details' }, icon('close'), 'Close');
-    fill(drawer, 
+    const can = (field) => !!(edit && edit.info.editable.has(field));
+    const saveState = (field) => {
+      const el = h('span', { class: 'save-state', 'aria-live': 'polite' });
+      if (opts.saved === field) { el.classList.add('ok'); fill(el, icon('tick'), 'Saved'); setTimeout(() => { if (el.classList.contains('ok')) fill(el); }, 2500); }
+      return el;
+    };
+
+    // Runs one save. On success the board behind the drawer is redrawn; selects
+    // also re-open the drawer so derived facts (and next transitions) are fresh.
+    async function commit(field, el, run, apply, revert, { reopen } = {}) {
+      el.className = 'save-state';
+      fill(el, 'Saving…');
+      try {
+        await run();
+      } catch (err) {
+        el.classList.add('err');
+        fill(el, err.message);
+        if (revert) revert();
+        return;
+      }
+      apply();
+      issue.updated = new Date();
+      afterEdit();
+      if (reopen && drawerToken && !drawer.hidden) { openDrawer(issue, null, { focus: field, saved: field }); return; }
+      el.classList.add('ok');
+      fill(el, icon('tick'), 'Saved');
+      setTimeout(() => { if (el.classList.contains('ok')) fill(el); }, 2500);
+    }
+    // Escape reverts an edited text field instead of closing the drawer.
+    const escapeReverts = (control, original) => control.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && control.value !== original()) { e.stopPropagation(); control.value = original(); control.blur(); }
+    });
+
+    // ----- Summary
+    let titleEl;
+    const titleState = saveState('summary');
+    if (can('summary')) {
+      titleEl = h('textarea', { id: 'drawerTitle', class: 'title-edit', rows: 1, maxlength: 255, 'aria-label': 'Summary', 'data-field': 'summary' });
+      titleEl.value = issue.summary;
+      const grow = () => { titleEl.style.height = 'auto'; titleEl.style.height = titleEl.scrollHeight + 'px'; };
+      titleEl.addEventListener('input', grow);
+      titleEl.addEventListener('focus', grow);
+      requestAnimationFrame(grow);
+      titleEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); titleEl.blur(); } });
+      escapeReverts(titleEl, () => issue.summary);
+      titleEl.addEventListener('blur', () => {
+        const v = titleEl.value.replace(/\s+/g, ' ').trim();
+        if (!v) { titleEl.value = issue.summary; grow(); return; }
+        grow();
+        if (v === issue.summary) return;
+        commit('summary', titleState, () => state.source.updateFields(issue.key, { summary: v }),
+          () => { issue.summary = v; }, () => { titleEl.value = issue.summary; grow(); });
+      });
+    } else {
+      titleEl = h('h2', { id: 'drawerTitle' }, issue.summary);
+    }
+
+    // ----- Status (Jira moves issues through workflow transitions)
+    let statusEl = h('span', { class: 'status-pill' }, swatch(`var(--st-${issue.category})`), issue.status);
+    const statusState = saveState('status');
+    if (edit && edit.info.transitions.length) {
+      const seen = new Set([issue.status]);
+      const ts = edit.info.transitions.filter((t) => !seen.has(t.to.name) && seen.add(t.to.name));
+      const sel = h('select', { class: 'select status-select', 'aria-label': 'Status', 'data-field': 'status' },
+        h('option', { value: '' }, issue.status),
+        ts.map((t) => h('option', { value: t.id }, t.name !== t.to.name ? `${t.to.name} (${t.name})` : t.to.name)));
+      sel.addEventListener('change', () => {
+        const t = ts.find((x) => x.id === sel.value);
+        if (!t) return;
+        commit('status', statusState, () => state.source.transition(issue.key, t.id), () => {
+          const now = new Date();
+          Object.assign(issue, { status: t.to.name, statusId: t.to.id, category: t.to.category, statusChanged: now,
+            resolved: t.to.category === 'done' ? now : null });
+        }, () => { sel.value = ''; }, { reopen: true });
+      });
+      statusEl = h('span', { class: 'status-chip' }, swatch(`var(--st-${issue.category})`), sel);
+    }
+
+    // ----- Assignee
+    let assigneeFact = [avatar(issue.assignee), issue.assignee ? issue.assignee.name : 'Unassigned'];
+    if (edit && edit.meta.users.length) {
+      const users = [...edit.meta.users];
+      if (issue.assignee && !users.some((u) => u.id === issue.assignee.id)) users.push(issue.assignee);
+      users.sort((a, b) => (b.isMe || false) - (a.isMe || false) || a.name.localeCompare(b.name));
+      const el = saveState('assignee');
+      const sel = h('select', { class: 'select quiet', 'aria-label': 'Assignee', 'data-field': 'assignee' },
+        h('option', { value: '' }, 'Unassigned'),
+        users.map((u) => h('option', { value: u.id, selected: !!(issue.assignee && issue.assignee.id === u.id) }, u.isMe ? `${u.name} (you)` : u.name)));
+      sel.addEventListener('change', () => {
+        const u = users.find((x) => x.id === sel.value) || null;
+        commit('assignee', el, () => state.source.assign(issue.key, u),
+          () => { issue.assignee = u ? { id: u.id, name: u.name, accountId: u.accountId || null, username: u.username || null } : null; },
+          () => { sel.value = issue.assignee ? issue.assignee.id : ''; }, { reopen: true });
+      });
+      assigneeFact = [avatar(issue.assignee), sel, el];
+    }
+
+    // ----- Priority
+    let priorityFact = [priorityIcon(issue), issue.priority];
+    if (can('priority') && edit.info.priorities.length) {
+      const el = saveState('priority');
+      const sel = h('select', { class: 'select quiet', 'aria-label': 'Priority', 'data-field': 'priority' },
+        edit.info.priorities.map((p) => h('option', { value: p.id, selected: p.name === issue.priority }, p.name)));
+      sel.addEventListener('change', () => {
+        const p = edit.info.priorities.find((x) => x.id === sel.value);
+        commit('priority', el, () => state.source.updateFields(issue.key, { priority: { id: p.id } }),
+          () => { issue.priority = p.name; issue.priorityRank = PRIORITY_RANKS[p.name.toLowerCase()] || 3; },
+          () => { const cur = edit.info.priorities.find((x) => x.name === issue.priority); sel.value = cur ? cur.id : ''; }, { reopen: true });
+      });
+      priorityFact = [priorityIcon(issue), sel, el];
+    }
+
+    // ----- Estimate
+    const unitWordLong = state.config.estimate.unit === 'h' ? 'hours' : 'story points';
+    let estimateFact = [issue.estimate == null ? 'Not estimated' : `${fmtNum(issue.estimate)} ${unitWordLong}`];
+    if (edit && usesEstimates()) {
+      const el = saveState('estimate');
+      const input = h('input', { class: 'input quiet num-edit', type: 'number', min: 0, step: 'any', inputmode: 'decimal',
+        'aria-label': state.config.estimate.unit === 'h' ? 'Estimate in hours' : 'Story points', 'data-field': 'estimate', placeholder: 'Not estimated' });
+      input.value = issue.estimate == null ? '' : String(issue.estimate);
+      const original = () => (issue.estimate == null ? '' : String(issue.estimate));
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') input.blur(); });
+      escapeReverts(input, original);
+      input.addEventListener('blur', () => {
+        if (input.value === original()) return;
+        if (input.value.trim() === '') { input.value = original(); el.className = 'save-state err'; fill(el, 'To clear an estimate, use Jira.'); return; }
+        const v = Number(input.value);
+        if (!isFinite(v) || v < 0) { input.value = original(); el.className = 'save-state err'; fill(el, 'Enter 0 or more.'); return; }
+        commit('estimate', el, () => state.source.setEstimate(issue.key, v, { boardId: state.boardId, unit: state.config.estimate.unit }),
+          () => { issue.estimate = v; }, () => { input.value = original(); });
+      });
+      estimateFact = [input, h('span', { class: 'muted' }, state.config.estimate.unit === 'h' ? 'hours' : 'points'), el];
+    }
+
+    // ----- Epic
+    let epicFact = issue.epic ? [h('span', { class: 'dot', style: `background:${epicColor(issue.epic)}` }), `${issue.epic.name} (${issue.epic.key})`] : ['–'];
+    if (edit) {
+      const epics = [...edit.meta.epics];
+      if (issue.epic && !epics.some((e) => e.key === issue.epic.key)) epics.push(issue.epic);
+      const el = saveState('epic');
+      const sel = h('select', { class: 'select quiet', 'aria-label': 'Epic', 'data-field': 'epic' },
+        h('option', { value: '' }, 'No epic'),
+        epics.map((e) => h('option', { value: e.key, selected: !!(issue.epic && issue.epic.key === e.key) }, e.name)));
+      sel.addEventListener('change', () => {
+        const e = epics.find((x) => x.key === sel.value) || null;
+        commit('epic', el, () => state.source.setEpic(issue.key, e ? e.key : null),
+          () => { issue.epic = e ? { key: e.key, name: e.name } : null; },
+          () => { sel.value = issue.epic ? issue.epic.key : ''; }, { reopen: true });
+      });
+      epicFact = [issue.epic ? h('span', { class: 'dot', style: `background:${epicColor(issue.epic)}` }) : null, sel, el];
+    }
+
+    // ----- Labels
+    let labelsFact = issue.labels.length ? issue.labels.map((l) => h('span', { class: 'chip' }, l)) : null;
+    if (can('labels')) {
+      const el = saveState('labels');
+      const input = h('input', { class: 'input quiet', type: 'text', 'aria-label': 'Labels, separated by commas', 'data-field': 'labels',
+        placeholder: 'Add labels, separated by commas', autocomplete: 'off' });
+      const original = () => issue.labels.join(', ');
+      input.value = original();
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') input.blur(); });
+      escapeReverts(input, original);
+      input.addEventListener('blur', () => {
+        // Jira labels can't contain spaces.
+        const next = [...new Set(input.value.split(/[,\s]+/).map((x) => x.trim()).filter(Boolean))];
+        if (next.join(',') === issue.labels.join(',')) { input.value = original(); return; }
+        commit('labels', el, () => state.source.updateFields(issue.key, { labels: next }),
+          () => { issue.labels = next; input.value = original(); }, () => { input.value = original(); });
+      });
+      labelsFact = [input, el];
+    }
+
+    // ----- Description
+    let descBlock = issue.description ? h('p', { class: 'description' }, issue.description) : h('p', { class: 'muted' }, 'No description.');
+    if (can('description')) {
+      const el = saveState('description');
+      // Wiki markup (Jira Server) is edited as written; rich text or HTML is edited as plain text.
+      const startText = () => (issue.descriptionFormat === 'wiki' && issue.descriptionRaw != null ? issue.descriptionRaw : issue.description || '');
+      const area = h('textarea', { class: 'desc-edit', 'aria-label': 'Description', 'data-field': 'description', placeholder: 'Add a description' });
+      area.value = startText();
+      const saveBtn = h('button', { type: 'button', class: 'btn primary' }, 'Save description');
+      const cancelBtn = h('button', { type: 'button', class: 'btn' }, 'Cancel');
+      const lossy = issue.descriptionFormat === 'adf' || issue.descriptionFormat === 'html';
+      const actions = h('div', { class: 'desc-actions', hidden: true }, saveBtn, cancelBtn,
+        lossy ? h('small', null, 'Saving turns formatting such as lists and links into plain text.') : null);
+      const dirty = () => area.value !== startText();
+      area.addEventListener('input', () => { actions.hidden = !dirty(); });
+      escapeReverts(area, startText);
+      area.addEventListener('keydown', (e) => { if (e.key === 'Escape') actions.hidden = true; });
+      cancelBtn.addEventListener('click', () => { area.value = startText(); actions.hidden = true; });
+      saveBtn.addEventListener('click', () => {
+        const v = area.value.replace(/\s+$/, '');
+        saveBtn.disabled = true;
+        commit('description', el, () => state.source.updateFields(issue.key, { description: v }), () => {
+          issue.descriptionRaw = v;
+          issue.descriptionFormat = 'wiki';
+          issue.description = state.source.kind === 'live' ? wikiToText(v) : v;
+          actions.hidden = true;
+        }, null).finally(() => { saveBtn.disabled = false; });
+      });
+      descBlock = [area, actions, el];
+    }
+
+    const editNote = editable
+      ? h('p', { class: 'edit-note' }, edit ? `Changes save to ${state.source.kind === 'live' ? 'Jira' : 'the demo'} as you make them.` : 'Loading editable fields…')
+      : null;
+
+    fill(drawer,
       h('div', { class: 'drawer-top' },
         h('span', { style: `color:var(--type-${issue.typeKind})` }, icon(issue.typeKind)),
         h('span', null, `${issue.type}  ${issue.key}`),
         closeBtn),
-      h('h2', { id: 'drawerTitle' }, issue.summary),
+      titleEl, titleState,
+      editNote,
       h('div', { class: 'drawer-status' },
-        h('span', { class: 'status-pill' }, swatch(`var(--st-${issue.category})`), issue.status),
+        statusEl, statusState,
         isBlocked(issue) ? h('span', { class: 'status-pill' }, icon('flag', 'tone-critical'), issue.flagged ? 'Blocked' : issue.status) : null,
         issue.added ? h('span', { class: 'status-pill' }, icon('plus'), 'Added after start') : null,
         issue.url
           ? h('a', { class: 'btn', href: issue.url, target: '_blank', rel: 'noopener noreferrer' }, icon('external'), 'Open in Jira')
-          : h('span', { class: 'muted', style: 'font-size:13px' }, 'Demo issue, not in Jira')),
+          : h('span', { class: 'muted', style: 'font-size:13px' }, 'Demo issue, not in Jira'),
+        state.source && state.source.createIssue && state.boardId
+          ? h('button', { type: 'button', class: 'btn', onclick: () => openCreate(null, issue),
+            title: `Create a copy on ${(state.boards.find((b) => b.id === state.boardId) || {}).name || 'this board'}, linked to ${issue.key}` }, icon('copy'), 'Clone')
+          : null),
       h('dl', { class: 'facts' },
-        fact('Assignee', avatar(issue.assignee), issue.assignee ? issue.assignee.name : 'Unassigned'),
+        fact('Assignee', ...assigneeFact),
         fact('Reporter', issue.reporter ? issue.reporter.name : '–'),
-        fact('Priority', priorityIcon(issue), issue.priority),
-        usesEstimates() ? fact('Estimate', issue.estimate == null ? 'Not estimated' : `${fmtNum(issue.estimate)} ${state.config.estimate.unit === 'h' ? 'hours' : 'story points'}`) : null,
-        fact('Epic', issue.epic ? [h('span', { class: 'dot', style: `background:${epicColor(issue.epic)}` }), `${issue.epic.name} (${issue.epic.key})`] : '–'),
-        issue.labels.length ? fact('Labels', issue.labels.map((l) => h('span', { class: 'chip' }, l))) : null,
+        fact('Priority', ...priorityFact),
+        issue.project && issue.offBoard ? fact('Project', `${issue.project.name} (${issue.project.key})`) : null,
+        issue.offBoard ? fact('Sprint', issue.sprint ? `${issue.sprint.name}${issue.sprint.state === 'future' ? ' (upcoming)' : ''}` : 'Backlog') : null,
+        !issue.offBoard && state.data && state.data.byKey.get(issue.key) === issue ? fact('Sprint', ...sprintFact(issue)) : null,
+        usesEstimates() && !issue.offBoard ? fact('Estimate', ...estimateFact) : null,
+        fact('Epic', ...epicFact),
+        labelsFact ? fact('Labels', ...labelsFact) : null,
         issue.components.length ? fact('Components', issue.components.join(', ')) : null,
         fact('Created', fmt(issue.created)),
         fact('Updated', fmt(issue.updated)),
         issue.resolved ? fact('Resolved', fmt(issue.resolved)) : null,
         issue.category === 'progress' && issue.statusChanged ? fact('In progress since', fmt(issue.statusChanged)) : null),
+      linkSections(issue),
       h('h3', null, 'Description'),
-      issue.description ? h('p', { class: 'description' }, issue.description) : h('p', { class: 'muted' }, 'No description.'),
+      descBlock,
       issue.subtasks.length ? [
         h('h3', null, `Subtasks  ${done}/${issue.subtasks.length}`),
         h('ul', { class: 'subtasks' }, issue.subtasks.map((st) => h('li', { class: st.done ? 'done' : '' },
           st.done ? icon('check', 'tone-good') : h('span', { class: 'swatch', style: 'background:var(--hair);border-radius:50%' }),
           h('span', null, `${st.key}  ${st.summary}`)))),
       ] : null);
-    drawer.hidden = false;
-    scrim.hidden = false;
-    requestAnimationFrame(() => drawer.classList.remove('closed'));
-    closeBtn.focus();
   }
+
+  // After a save: redraw the board behind the drawer and refresh My work.
+  function afterEdit() {
+    if (state.data) renderAll();
+    state.mine = null;
+    refreshMine().catch(() => { /* the tab shows the error when opened */ });
+  }
+
   function closeDrawer() {
     if (drawer.hidden) return;
+    drawerToken = null;
     drawer.classList.add('closed');
     scrim.hidden = true;
     setTimeout(() => { drawer.hidden = true; }, 200);
@@ -1699,7 +3171,7 @@
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && !drawer.hidden) closeDrawer();
     if (e.key === 'Tab' && !drawer.hidden) {
-      const focusables = drawer.querySelectorAll('button, a[href], [tabindex="0"]');
+      const focusables = [...drawer.querySelectorAll('button, a[href], input, select, textarea, [tabindex="0"]')].filter((el) => !el.disabled);
       if (!focusables.length) return;
       const first = focusables[0], last = focusables[focusables.length - 1];
       if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
@@ -1708,10 +3180,442 @@
   });
 
   // ======================================================================
+  // Create an issue (in the drawer)
+  // ======================================================================
+  // seed: an issue to clone. The form starts from its fields and the new issue is
+  // linked back to it.
+  async function openCreate(from, seed) {
+    if (drawer.hidden) drawerReturnFocus = from || null;
+    const closeBtn = h('button', { type: 'button', class: 'btn', onclick: closeDrawer, 'aria-label': 'Close' }, icon('close'), 'Close');
+    const body = h('div', null, h('p', { class: 'muted' }, 'Loading types, epics and people…'));
+    fill(drawer,
+      h('div', { class: 'drawer-top' }, icon(seed ? 'copy' : 'plus'), h('span', null, state.boards.find((b) => b.id === state.boardId)?.name || ''), closeBtn),
+      h('h2', { id: 'drawerTitle' }, seed ? `Clone ${seed.key}` : 'Create an issue'),
+      body);
+    drawer.hidden = false;
+    scrim.hidden = false;
+    drawer.scrollTop = 0;
+    requestAnimationFrame(() => drawer.classList.remove('closed'));
+    closeBtn.focus();
+
+    let meta;
+    {
+      try {
+        meta = await boardMeta();
+      } catch (err) {
+        fill(body, h('div', { class: 'form-error' }, icon('stop', 'tone-critical'), h('span', null, `Couldn't load the form: ${err.message}`)),
+          h('p', null, h('button', { type: 'button', class: 'btn', onclick: () => openCreate(null, seed) }, 'Try again')));
+        return;
+      }
+    }
+    if (!meta.types.length) {
+      fill(body, h('p', { class: 'form-error' }, 'This token can\'t create issues in the project, or the project has no issue types to create.'));
+      return;
+    }
+    fill(body, createForm(meta, seed));
+    body.querySelector(seed ? '[name=summary]' : '[name=cloneFind]').focus();
+  }
+
+  // Stories are filed per platform; the summary carries the platform and feature:
+  // "[iOS] [Saved cards] Show the card's expiry date".
+  const PLATFORMS = ['iOS', 'Android', 'Web'];
+  const TAGGED = /^\s*\[(?:ios|android|web)\]\s*\[([^\]]+)\]/i;
+  const cleanFeature = (v) => v.replace(/[[\]]/g, '').replace(/\s+/g, ' ').trim();
+  const taggedSummary = (platform, feature, subject) => `[${platform}] ${feature ? `[${feature}] ` : ''}${subject}`;
+  // Feature names you've used, plus any already in summaries on the board or in My work.
+  function knownFeatures() {
+    const seen = new Map();
+    const add = (name) => { const n = cleanFeature(name || ''); if (n && !seen.has(n.toLowerCase())) seen.set(n.toLowerCase(), n); };
+    (prefs.features || []).forEach(add);
+    const pools = [state.data ? state.data.issues : [], state.mine ? state.mine.issues : []];
+    for (const pool of pools) for (const i of pool) { const m = i.summary.match(TAGGED); if (m) add(m[1]); }
+    return [...seen.values()];
+  }
+  function rememberFeature(name) {
+    if (!name) return;
+    prefs.features = [name, ...(prefs.features || []).filter((f) => f.toLowerCase() !== name.toLowerCase())].slice(0, 40);
+  }
+  function pluralType(n, name) {
+    const word = name.toLowerCase();
+    if (n === 1) return word;
+    return /[^aeiou]y$/.test(word) ? word.slice(0, -1) + 'ies' : word + 's';
+  }
+
+  // "[iOS] [Saved cards] Show expiry" -> { platform: 'iOS', feature: 'Saved cards', subject: 'Show expiry' }
+  function splitSummary(summary) {
+    const m = summary.match(/^\s*\[(ios|android|web)\]\s*(?:\[([^\]]+)\]\s*)?(.*)$/i);
+    if (!m) return { platform: null, feature: '', subject: summary.trim() };
+    return { platform: PLATFORMS.find((p) => p.toLowerCase() === m[1].toLowerCase()), feature: m[2] ? cleanFeature(m[2]) : '', subject: m[3].trim() };
+  }
+  const issueHome = (i) => (i.offBoard && i.project ? i.project.name : (state.boards.find((b) => b.id === state.boardId) || {}).name || '');
+
+  function createForm(meta, seed) {
+    const unit = state.config && state.config.estimate ? state.config.estimate.unit : null;
+    const open = state.sprints.filter((sp) => sp.state !== 'closed')
+      .sort((a, b) => (a.state === 'active' ? 0 : 1) - (b.state === 'active' ? 0 : 1) || (a.start || 0) - (b.start || 0));
+    const current = state.sprintId === BACKLOG ? null : open.find((sp) => sp.id === state.sprintId) || open.find((sp) => sp.state === 'active');
+    const users = [...meta.users].sort((a, b) => b.isMe - a.isMe || a.name.localeCompare(b.name));
+    const field = (label, control, hint) => h('label', { class: 'field' }, h('span', null, label), control, hint ? h('small', null, hint) : null);
+    const select = (name, options) => h('select', { class: 'select', name, style: 'width:100%' },
+      options.map(([value, text, selected]) => h('option', { value, selected: !!selected }, text)));
+    const userOptions = (selectedId) => [['', 'Unassigned'], ...users.map((u) => [u.id, u.isMe ? `${u.name} (you)` : u.name, u.id === selectedId])];
+    const lastAssignee = prefs.platformAssignee || {};
+
+    const parts = seed ? splitSummary(seed.summary) : null;
+    const seedType = seed && meta.types.find((t) => t.name.toLowerCase() === seed.type.toLowerCase());
+    const typeSel = select('type', meta.types.map((t) => [t.id, t.name, seedType ? t === seedType : /story/i.test(t.name)]));
+    // Start from the cloned issue's platform, else the platforms picked last time
+    // (older saves kept one choice in prefs.platform, where 'All' meant all three).
+    const remembered = Array.isArray(prefs.platforms) ? prefs.platforms
+      : prefs.platform === 'All' || !prefs.platform ? PLATFORMS : [prefs.platform];
+    const startWith = parts && parts.platform ? [parts.platform] : remembered.filter((p) => PLATFORMS.includes(p));
+    const platformBoxes = PLATFORMS.map((p) => h('input', { type: 'checkbox', name: 'platform', value: p, checked: startWith.includes(p) }));
+    const allBtn = h('button', { type: 'button', class: 'linklike' });
+    const platformGroup = h('fieldset', { class: 'platforms' },
+      h('legend', null, 'Platforms'),
+      h('div', { class: 'platform-row' },
+        h('div', { class: 'choice' }, PLATFORMS.map((p, n) => h('label', null, platformBoxes[n], h('span', null, icon('tick', 'tick'), p)))),
+        allBtn),
+      h('small', { class: 'muted' }, 'Pick one or more. Each platform gets its own issue.'));
+    allBtn.addEventListener('click', () => {
+      const all = platformBoxes.every((b) => b.checked);
+      platformBoxes.forEach((b) => { b.checked = !all; });
+      update();
+    });
+    const features = knownFeatures();
+    const featureList = h('datalist', { id: 'featureNames' }, features.map((f) => h('option', { value: f })));
+    const feature = h('input', { class: 'input', name: 'feature', type: 'text', list: 'featureNames', autocomplete: 'off', maxlength: 60,
+      placeholder: features.length ? `For example ${features[0]}` : 'For example Saved cards' });
+    const summary = h('input', { class: 'input', name: 'summary', type: 'text', maxlength: 255, required: true, autocomplete: 'off' });
+    const preview = h('div', { class: 'preview', 'aria-live': 'polite' });
+    const description = h('textarea', { class: 'input', name: 'description', rows: 5 });
+    const seedEpic = seed && seed.epic && meta.epics.find((e) => e.key === seed.epic.key);
+    const epicSel = select('epic', [['', 'No epic'], ...meta.epics.map((e) => [e.key, `${e.name} (${e.key})`, seedEpic === e])]);
+    const estimate = unit ? h('input', { class: 'input', name: 'estimate', type: 'number', min: 0, step: unit === 'h' ? 0.5 : 'any', inputmode: 'decimal' }) : null;
+    if (seed) {
+      feature.value = parts.feature;
+      summary.value = parts.subject;
+      description.value = seed.description || '';
+      if (estimate && seed.estimate != null && !seed.offBoard) estimate.value = String(seed.estimate);
+    }
+    let cloneOf = seed || null;
+
+    // Clone source: either the issue being cloned, or a finder to pick one from any board.
+    const cloneBox = h('div', { class: 'field' });
+    function renderCloneBox() {
+      if (cloneOf) {
+        fill(cloneBox, h('div', { class: 'clone-from' }, icon('copy'),
+          h('span', { class: 'what' }, 'Cloning ', h('strong', null, cloneOf.key), ` ${cloneOf.summary}`,
+            issueHome(cloneOf) ? h('span', { class: 'muted' }, `  (${issueHome(cloneOf)})`) : null),
+          h('button', { type: 'button', class: 'linklike', onclick: () => { cloneOf = null; renderCloneBox(); update(); } }, 'Don\'t link')));
+        return;
+      }
+      const results = h('ul', { class: 'finds' });
+      const findInput = h('input', { class: 'input', name: 'cloneFind', type: 'search', autocomplete: 'off',
+        placeholder: 'Issue key like MOB-421, or words from its summary', 'aria-label': 'Find an issue to clone' });
+      const findBtn = h('button', { type: 'button', class: 'btn' }, icon('search'), 'Find');
+      async function find() {
+        const q = findInput.value.trim();
+        if (!q) { findInput.focus(); return; }
+        fill(results, h('li', { class: 'muted' }, 'Searching…'));
+        try {
+          const found = /^[a-z][a-z0-9_]*-\d+$/i.test(q) ? [await state.source.getIssue(q)] : await state.source.findIssues(q);
+          fill(results, found.length ? found.map((i) => h('li', null, h('button', { type: 'button', class: 'link-item',
+            onclick: () => openCreate(null, (state.data && state.data.byKey.get(i.key)) || i) },
+            h('span', { style: `color:var(--type-${i.typeKind})`, title: i.type }, icon(i.typeKind)),
+            h('span', { class: 'what' }, h('strong', null, i.key), `  ${i.summary}`),
+            h('span', { class: 'where' }, i.project ? i.project.name : '')))) : h('li', { class: 'muted' }, 'No issues match.'));
+        } catch (err) {
+          fill(results, h('li', { class: 'form-error' }, icon('stop', 'tone-critical'), h('span', null, err.message)));
+        }
+      }
+      findBtn.addEventListener('click', find);
+      findInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); find(); } });
+      fill(cloneBox, h('span', null, 'Clone an existing issue ', h('span', { class: 'req' }, '(optional)')),
+        h('div', { class: 'finder' }, findInput, findBtn),
+        h('small', null, 'Searches every board you can see. The copy is linked to the original.'),
+        results);
+    }
+    const sprintSel = select('sprint', [...open.map((sp) => [String(sp.id), sprintOptionLabel(sp), current && sp.id === current.id]), ['', 'Backlog (no sprint)', !current]]);
+    // One assignee per platform: iOS, Android and web work usually go to different people.
+    const assigneeSels = Object.fromEntries(PLATFORMS.map((p) => [p, select('assignee-' + p, userOptions(lastAssignee[p]))]));
+    const assigneeBox = h('div', { class: 'assignees' });
+    const error = h('div', { class: 'form-error', role: 'alert', hidden: true });
+    const submit = h('button', { class: 'btn primary', type: 'submit' }, 'Create issue');
+
+    // Always in iOS, Android, Web order, whatever order they were ticked in.
+    const platformsChosen = () => platformBoxes.filter((b) => b.checked).map((b) => b.value);
+    const typeName = () => (meta.types.find((t) => t.id === typeSel.value) || { name: 'Issue' }).name;
+    function update() {
+      const plats = platformsChosen();
+      const subject = summary.value.trim();
+      const feat = cleanFeature(feature.value);
+      allBtn.textContent = plats.length === PLATFORMS.length ? 'Clear all' : 'Select all';
+      if (!plats.length) {
+        fill(preview, h('div', { class: 'muted' }, 'Pick at least one platform.'));
+        submit.textContent = `Create ${pluralType(1, typeName())}`;
+        fill(assigneeBox);
+        return;
+      }
+      fill(preview,
+        h('div', { class: 'muted' }, plats.length > 1 ? `Creates ${plats.length} ${pluralType(plats.length, typeName())}:` : 'Summary in Jira:'),
+        h('ul', null, plats.map((p) => h('li', null, taggedSummary(p, feat, subject || '…')))),
+        cloneOf ? h('div', { class: 'muted' }, `${plats.length > 1 ? 'Each one is' : 'It\'s'} linked to ${cloneOf.key} as a clone.`) : null);
+      submit.textContent = `Create ${plats.length > 1 ? plats.length + ' ' : ''}${pluralType(plats.length, typeName())}`;
+      fill(assigneeBox, plats.length > 1
+        ? h('div', { class: 'row3', style: `grid-template-columns:repeat(${plats.length}, minmax(0, 1fr))` }, plats.map((p) => field(`${p} assignee`, assigneeSels[p])))
+        : field('Assignee', assigneeSels[plats[0]], users.length ? null : 'Couldn\'t list people who can be assigned.'));
+    }
+    platformGroup.addEventListener('change', update);
+    for (const el of [summary, feature]) el.addEventListener('input', update);
+    typeSel.addEventListener('change', update);
+
+    const form = h('form', { class: 'create-form', noValidate: true },
+      cloneBox,
+      h('div', { class: 'row2' }, field('Type', typeSel), h('span')),
+      platformGroup,
+      field('Feature', feature, 'Pick one you\'ve used before, or type a new name. It\'s remembered for next time.'),
+      featureList,
+      h('label', { class: 'field' }, h('span', null, 'Subject ', h('span', { class: 'req' }, '(required)')), summary),
+      preview,
+      field('Description', description),
+      h('div', { class: 'row2' }, field('Epic', epicSel, meta.epics.length ? null : 'No open epics on this board.'),
+        estimate ? field(unit === 'h' ? 'Estimate (hours, each)' : 'Story points (each)', estimate) : h('span')),
+      h('div', { class: 'row2' }, field('Sprint', sprintSel), h('span')),
+      assigneeBox,
+      error,
+      h('div', { class: 'actions' }, submit, h('button', { class: 'btn', type: 'button', onclick: closeDrawer }, 'Cancel')));
+    renderCloneBox();
+    update();
+
+    const fail = (msg) => { error.hidden = !msg; fill(error, msg ? [icon('stop', 'tone-critical'), h('span', null, msg)] : null); };
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const subject = summary.value.trim();
+      const feat = cleanFeature(feature.value);
+      const plats = platformsChosen();
+      if (!plats.length) { fail('Pick at least one platform.'); platformBoxes[0].focus(); return; }
+      if (!subject) { fail('Enter a subject.'); summary.focus(); return; }
+      const longest = Math.max(...plats.map((p) => taggedSummary(p, feat, subject).length));
+      if (longest > 255) { fail(`The full summary is ${longest} characters; Jira allows 255. Shorten the subject or feature name.`); summary.focus(); return; }
+      let est = null;
+      if (estimate && estimate.value.trim() !== '') {
+        est = Number(estimate.value);
+        if (!isFinite(est) || est < 0) { fail('The estimate has to be a number of 0 or more.'); estimate.focus(); return; }
+      }
+      fail('');
+      const type = meta.types.find((t) => t.id === typeSel.value);
+      const sprintId = sprintSel.value ? Number(sprintSel.value) : null;
+      const label = submit.textContent;
+      submit.disabled = true;
+      const created = [];
+      const failures = [];
+      for (const p of plats) {
+        const assignee = users.find((u) => u.id === assigneeSels[p].value) || null;
+        const input = { type, summary: taggedSummary(p, feat, subject), description: description.value.trim(), epicKey: epicSel.value || null,
+          estimate: est, sprintId, assignee, assigneeId: assignee ? assignee.id : null, cloneOf: cloneOf ? cloneOf.key : null };
+        submit.textContent = plats.length > 1 ? `Creating ${p}…` : 'Creating…';
+        try {
+          created.push({ platform: p, ...(await state.source.createIssue(input, { boardId: state.boardId, unit })) });
+        } catch (err) {
+          // Nothing created yet: stay on the form so it can be fixed and retried.
+          if (!created.length) {
+            fail(`Couldn't create the ${plats.length > 1 ? p + ' ' : ''}${pluralType(1, type.name)}: ${err.message}`);
+            submit.disabled = false;
+            submit.textContent = label;
+            return;
+          }
+          failures.push(`Couldn't create the ${p} ${pluralType(1, type.name)}: ${err.message}`);
+        }
+      }
+      rememberFeature(feat);
+      prefs.platforms = plats;
+      delete prefs.platform;
+      prefs.platformAssignee = { ...lastAssignee, ...Object.fromEntries(plats.map((p) => [p, assigneeSels[p].value])) };
+      savePrefs();
+      closeDrawer();
+      afterCreate(created, sprintId, failures, subject, cloneOf ? cloneOf.key : null);
+    });
+    return form;
+  }
+
+  async function afterCreate(results, sprintId, failures, subject, cloneKey) {
+    const sprint = state.sprints.find((sp) => sp.id === sprintId);
+    const where = (sprint ? sprint.name : 'the backlog') + (cloneKey ? `, cloned from ${cloneKey}` : '');
+    const keys = results.map((r) => r.key).join(', ');
+    const problems = [...results.flatMap((r) => r.warnings.map((w) => (results.length > 1 ? `${r.key} (${r.platform}): ${w}` : w))), ...failures];
+    state.mine = null;
+    refreshMine().catch(() => { /* the tab shows the error when opened */ });
+    const one = results.length === 1 ? results[0] : null;
+    const jiraAction = one && one.url ? { label: 'Open in Jira', run: () => window.open(one.url, '_blank', 'noopener') } : null;
+    showToast(problems.length ? `Created ${keys} in ${where}, with problems:` : `Created ${keys} in ${where}.`,
+      { details: problems, sticky: problems.length > 0, action: jiraAction });
+    if ((sprintId == null ? BACKLOG : sprintId) !== state.sprintId || !state.data) return;
+    // Jira's search index can lag a moment behind a create.
+    if (state.source.kind === 'live') await new Promise((r) => setTimeout(r, 800));
+    await selectSprint(state.sprintId);
+    if (problems.length || !state.data) return;
+    const found = results.map((r) => state.data.byKey.get(r.key)).filter(Boolean);
+    if (found.length === 1) {
+      showToast(`Created ${keys} in ${where}.`, { action: { label: 'Show it', run: () => openDrawer(found[0]) } });
+    } else if (found.length > 1) {
+      showToast(`Created ${keys} in ${where}.`, { action: { label: 'Show them', run: () => {
+        state.filters = { q: subject, people: new Set(), type: '', epic: '', attention: false };
+        if (prefs.view === 'deps') { prefs.view = 'board'; savePrefs(); }
+        setTab('sprint');
+        renderFilters();
+        renderBelowFilters();
+        $('boardSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } } });
+    }
+  }
+
+  // ======================================================================
+  // Toast
+  // ======================================================================
+  const toast = $('toast');
+  let toastTimer = null;
+  function showToast(message, { action, details, sticky } = {}) {
+    clearTimeout(toastTimer);
+    fill(toast,
+      h('div', null, h('div', null, message), details && details.length ? h('ul', null, details.map((d) => h('li', null, d))) : null),
+      action ? h('button', { type: 'button', class: 'btn', onclick: () => { hideToast(); action.run(); } }, action.label) : null,
+      h('button', { type: 'button', class: 'btn', 'aria-label': 'Dismiss', onclick: hideToast }, icon('close')));
+    toast.hidden = false;
+    if (!sticky) toastTimer = setTimeout(hideToast, 8000);
+  }
+  function hideToast() { clearTimeout(toastTimer); toast.hidden = true; }
+
+  // ======================================================================
+  // My work: everything assigned to you, grouped by board
+  // ======================================================================
+  let mineLoading = null;
+  function refreshMine() {
+    if (!state.source) return Promise.resolve();
+    const source = state.source;
+    mineLoading = source.myWork().then((m) => {
+      if (state.source !== source) return;
+      state.mine = m;
+      updateMineCount();
+      if (currentScreen === 'mine') renderMine();
+    }).finally(() => { mineLoading = null; });
+    return mineLoading;
+  }
+  function updateMineCount() {
+    const c = $('mineCount');
+    c.hidden = !state.mine;
+    if (state.mine) {
+      c.textContent = String(state.mine.issues.length);
+      c.setAttribute('aria-label', `${state.mine.issues.length} open`);
+    }
+  }
+  async function loadMine(force) {
+    if (state.mine && !force) return renderMine();
+    if (!state.mine) fill($('mineView'), h('p', { class: 'page-note' }, 'Loading work assigned to you…'));
+    setBusy('Loading your work…');
+    try {
+      await (mineLoading && !force ? mineLoading : refreshMine());
+      renderMine();
+    } catch (err) {
+      fill($('mineView'), h('div', { class: 'banner', role: 'alert' }, icon('stop'), h('span', null, `Couldn't load your work: ${err.message}`),
+        h('button', { type: 'button', class: 'btn', onclick: () => loadMine(true) }, 'Try again')));
+    } finally {
+      setBusy('');
+    }
+  }
+
+  const fmtAgo = (d) => {
+    if (!d) return '–';
+    const days = Math.floor((startOfDay(new Date()) - startOfDay(d)) / DAY_MS);
+    return days <= 0 ? 'Today' : days === 1 ? 'Yesterday' : days < 14 ? `${days} days ago` : fmtDay.format(d);
+  };
+
+  function renderMine() {
+    const view = $('mineView');
+    if (!state.mine) return;
+    const { me, issues, boardNames } = state.mine;
+    const f = state.mineFilter;
+    const q = f.q.trim().toLowerCase();
+    const shown = issues.filter((i) => (!f.type || i.type === f.type) &&
+      (!q || i.key.toLowerCase().includes(q) || i.summary.toLowerCase().includes(q)));
+
+    const groups = new Map();
+    for (const i of shown) {
+      const id = i.sprint && i.sprint.boardId != null ? 'b' + i.sprint.boardId : 'p' + i.project.key;
+      if (!groups.has(id)) {
+        const here = i.sprint && i.sprint.boardId === state.boardId;
+        const title = i.sprint
+          ? boardNames.get(i.sprint.boardId) || (here && state.boards.find((b) => b.id === state.boardId)?.name) || `Board ${i.sprint.boardId}`
+          : `${i.project.name} backlog`;
+        groups.set(id, { id, title, here, backlog: !i.sprint, issues: [], sprints: new Map() });
+      }
+      const g = groups.get(id);
+      g.issues.push(i);
+      if (i.sprint) g.sprints.set(i.sprint.id, i.sprint);
+    }
+    const list = [...groups.values()].sort((a, b) => a.here - b.here || a.backlog - b.backlog || b.issues.length - a.issues.length || a.title.localeCompare(b.title));
+    const elsewhere = issues.filter((i) => i.sprint && i.sprint.boardId !== state.boardId).length;
+    const inBacklog = issues.filter((i) => !i.sprint).length;
+    const boardCount = new Set(issues.filter((i) => i.sprint).map((i) => i.sprint.boardId)).size;
+
+    const search = h('input', { class: 'input', type: 'search', placeholder: 'Search key or summary', value: f.q, 'aria-label': 'Search your issues',
+      oninput: (e) => { f.q = e.target.value; renderMineGroups(); } });
+    const types = [...new Set(issues.map((i) => i.type))].sort();
+    const typeSel = h('select', { class: 'select', 'aria-label': 'Filter by type', onchange: (e) => { f.type = e.target.value; renderMine(); } },
+      h('option', { value: '' }, 'All types'), types.map((t) => h('option', { value: t, selected: f.type === t }, t)));
+    const groupsEl = h('div');
+
+    const sentence = issues.length
+      ? [`${plural(issues.length, 'open issue', 'open issues')} assigned to ${me.name}`,
+        boardCount ? `, on ${plural(boardCount, 'board', 'boards')}` : '',
+        elsewhere ? `. ${fmtNum(elsewhere)} ${elsewhere === 1 ? 'is' : 'are'} in other boards' sprints` : '',
+        inBacklog ? `${elsewhere ? ' and' : '.'} ${fmtNum(inBacklog)} ${inBacklog === 1 ? 'is' : 'are'} in a backlog` : '', '.'].join('')
+      : `Nothing open is assigned to ${me.name}.`;
+
+    fill(view,
+      h('section', { class: 'mine-head' }, h('h1', null, 'Assigned to you'), h('p', null, sentence)),
+      issues.length ? h('div', { class: 'mine-tools' }, h('div', { class: 'search' }, icon('search'), search), typeSel) : null,
+      groupsEl);
+
+    function renderMineGroups() {
+      const q2 = f.q.trim().toLowerCase();
+      fill(groupsEl, list.map((g) => {
+        const rows = g.issues.filter((i) => !q2 || i.key.toLowerCase().includes(q2) || i.summary.toLowerCase().includes(q2));
+        if (!rows.length) return null;
+        const sprintNames = [...g.sprints.values()].map((sp) => `${sp.name}${sp.state === 'future' ? ' (upcoming)' : ''}`).join(', ');
+        return h('section', { class: 'mine-group' },
+          h('div', { class: 'mine-group-head' },
+            h('h2', null, g.title),
+            g.here ? h('span', { class: 'here-tag' }, 'This board') : null,
+            h('span', { class: 'muted' }, [plural(rows.length, 'issue', 'issues'), sprintNames ? `in ${sprintNames}` : 'not in a sprint'].join(' '))),
+          h('div', { class: 'table-wrap' }, h('table', { class: 'issues mine-table' },
+            h('colgroup', null, ['120px', 'auto', '150px', '200px', '120px', '120px'].map((w) => h('col', { style: `width:${w}` }))),
+            h('thead', null, h('tr', null, ['Key', 'Summary', 'Status', 'Sprint', 'Priority', 'Updated'].map((t) => h('th', null, t)))),
+            h('tbody', null, rows.map((i) => {
+              const tr = h('tr', { tabindex: 0, 'aria-label': `${i.key}: ${i.summary}` },
+                h('td', null, h('span', { class: 'status-chip' }, h('span', { style: `color:var(--type-${i.typeKind})`, title: i.type }, icon(i.typeKind)), i.key)),
+                h('td', { class: 'summary' }, i.summary, waitsOnOpen(i).length ? h('span', { class: 'dep-line' }, icon('dep', 'tone-critical'), h('span', null, 'Waits on ', h('strong', null, keyList(waitsOnOpen(i))))) : null),
+                h('td', null, h('span', { class: 'status-chip' }, swatch(`var(--st-${i.category})`), i.status)),
+                h('td', null, i.sprint ? h('span', { class: 'sprint-tag' }, i.sprint.name, i.sprint.state === 'future' ? h('span', { class: 'muted' }, '(upcoming)') : null) : h('span', { class: 'muted' }, 'Backlog')),
+                h('td', null, h('span', { class: 'status-chip' }, priorityIcon(i), i.priority)),
+                h('td', null, fmtAgo(i.updated)));
+              const open = () => openDrawer((state.data && state.data.byKey.get(i.key)) || i, tr);
+              tr.addEventListener('click', open);
+              tr.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
+              return tr;
+            })))));
+      }), shown.length || !issues.length ? null : h('p', { class: 'empty-note' }, 'No issues match the filters.'));
+    }
+    renderMineGroups();
+  }
+
+  // ======================================================================
   // Top-level render
   // ======================================================================
   function renderBelowFilters() {
     const issues = filteredIssues();
+    $('burndownPanel').hidden = isBacklog();
+    document.querySelector('.insights').classList.toggle('no-burndown', isBacklog());
     renderBurndown(issues);
     renderWorkload(issues);
     renderAttention(issues);
@@ -1725,7 +3629,7 @@
   }
   function renderMetricToggle() {
     const toggle = $('metricToggle');
-    toggle.hidden = !usesEstimates();
+    toggle.hidden = !usesEstimates() || currentScreen !== 'sprint';
     for (const b of toggle.querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.metric === metric()));
   }
 
@@ -1734,16 +3638,41 @@
     fill($('banner'), message ? h('div', { class: 'banner', role: 'alert' }, icon('stop'), h('span', null, message),
       retry ? h('button', { type: 'button', class: 'btn', onclick: retry }, 'Try again') : null) : '');
   }
+  let currentScreen = null;
   function showScreen(name, note) {
+    // The sprint tab remembers its screen so switching back from My work restores it.
+    if (name === 'sprint' || name === 'note') {
+      state.sprintScreen = { name, note };
+      if (state.source && prefs.tab === 'mine') name = 'mine';
+    }
+    currentScreen = name;
     $('connect').hidden = name !== 'connect';
     $('sprintView').hidden = name !== 'sprint';
     $('pageNote').hidden = name !== 'note';
-    if (note) $('pageNote').textContent = note;
-    const inSprint = name === 'sprint';
-    $('pickers').hidden = !inSprint;
-    $('refreshBtn').hidden = !inSprint;
+    $('mineView').hidden = name !== 'mine';
+    if (name === 'note' && note) $('pageNote').textContent = note;
+    const connected = !!state.source && name !== 'connect';
+    $('tabs').hidden = !connected;
+    for (const t of $('tabs').querySelectorAll('.tab')) {
+      if (t.dataset.tab === (name === 'mine' ? 'mine' : 'sprint')) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current');
+    }
+    $('pickers').hidden = !(name === 'sprint' || (name === 'note' && connected && state.boards.length));
+    $('metricToggle').hidden = name !== 'sprint' || !usesEstimates();
+    $('refreshBtn').hidden = !(name === 'sprint' || name === 'mine');
+    $('createBtn').hidden = !connected || !state.boardId || !state.source.createIssue;
     $('connectionBtn').hidden = name === 'connect';
-    $('sourceTag').hidden = !state.source || name === 'connect';
+    $('sourceTag').hidden = !connected;
+    if (name === 'mine') loadMine();
+  }
+  function setTab(tab) {
+    if (prefs.tab === tab && currentScreen === (tab === 'mine' ? 'mine' : state.sprintScreen.name)) return;
+    prefs.tab = tab;
+    savePrefs();
+    closeDrawer();
+    hideTooltip();
+    if (tab === 'mine') showScreen('mine');
+    else showScreen(state.sprintScreen.name, state.sprintScreen.note);
+    if (tab === 'sprint' && state.data && currentScreen === 'sprint') renderBurndown(filteredIssues());
   }
 
   function sprintOptionLabel(sp) {
@@ -1753,8 +3682,9 @@
   function renderPickers() {
     fill($('boardSelect'), ...state.boards.map((b) => h('option', { value: String(b.id), selected: b.id === state.boardId }, b.name)));
     $('boardSelect').disabled = state.boards.length < 2;
-    const groups = [['active', 'Active'], ['future', 'Upcoming'], ['closed', 'Closed']];
+    const groups = [['active', 'Active'], ['future', 'Upcoming'], [BACKLOG, 'Not in a sprint'], ['closed', 'Closed']];
     fill($('sprintSelect'), ...groups.map(([st, label]) => {
+      if (st === BACKLOG) return h('optgroup', { label }, h('option', { value: BACKLOG, selected: state.sprintId === BACKLOG }, 'Backlog'));
       let list = state.sprints.filter((sp) => sp.state === st);
       if (st === 'closed') list = list.slice().sort((a, b) => (b.completeDate || b.end || 0) - (a.completeDate || a.end || 0));
       return list.length ? h('optgroup', { label }, list.map((sp) => h('option', { value: String(sp.id), selected: sp.id === state.sprintId }, sprintOptionLabel(sp)))) : null;
@@ -1767,6 +3697,10 @@
   async function start(source, project) {
     state.source = source;
     state.epicColor = new Map();
+    state.mine = null;
+    state.createMeta = null;
+    state.mineFilter = { q: '', type: '' };
+    updateMineCount();
     const tag = $('sourceTag');
     tag.textContent = source.label;
     tag.className = 'source-tag' + (source.kind === 'demo' ? ' demo' : '');
@@ -1774,11 +3708,13 @@
     const saved = store.get('localStorage', 'sprintboard:conn', {});
     const preferred = source.kind === 'live' && state.boards.find((b) => b.id === saved.boardId);
     await selectBoard((preferred || state.boards[0]).id);
+    if (prefs.tab !== 'mine') refreshMine().catch(() => { /* the tab shows the error when opened */ });
   }
 
   async function selectBoard(boardId) {
     const seq = ++state.loadSeq;
     state.boardId = boardId;
+    state.createMeta = null;
     setBusy('Loading board…');
     const [config, sprints] = await Promise.all([state.source.boardConfig(boardId), state.source.listSprints(boardId)]);
     if (seq !== state.loadSeq) return;
@@ -1791,14 +3727,8 @@
     const pick = sprints.find((sp) => sp.state === 'active') ||
       sprints.filter((sp) => sp.state === 'closed').sort((a, b) => (b.completeDate || b.end || 0) - (a.completeDate || a.end || 0))[0] ||
       sprints.find((sp) => sp.state === 'future');
-    if (!pick) {
-      setBusy('');
-      renderPickers();
-      showScreen('note', 'This board has no sprints yet. Create one in Jira, then refresh.');
-      $('pickers').hidden = false;
-      return;
-    }
-    await selectSprint(pick.id);
+    // No sprints yet: the backlog is still worth showing.
+    await selectSprint(pick ? pick.id : BACKLOG);
   }
 
   async function selectSprint(sprintId) {
@@ -1806,17 +3736,22 @@
     state.sprintId = sprintId;
     renderPickers();
     renderMetricToggle();
-    const sprint = state.sprints.find((sp) => sp.id === sprintId);
-    setBusy('Loading sprint…');
+    const sprint = sprintId === BACKLOG ? { ...BACKLOG_SPRINT } : state.sprints.find((sp) => sp.id === sprintId);
+    setBusy(sprintId === BACKLOG ? 'Loading backlog…' : 'Loading sprint…');
     if (state.data) $('sprintView').classList.add('loading');
     try {
       const result = await state.source.loadSprint(state.boardId, sprintId, state.config);
       if (seq !== state.loadSeq) return;
-      if (!sprint.start) sprint.start = new Date();
-      if (!sprint.end) sprint.end = addDays(sprint.start, 14);
+      if (sprintId !== BACKLOG) {
+        if (!sprint.start) sprint.start = new Date();
+        if (!sprint.end) sprint.end = addDays(sprint.start, 14);
+      }
       const keepFilters = state.data && state.data.sprint.id === sprintId;
-      state.data = { sprint, ...result };
-      if (!keepFilters) state.filters = { q: '', people: new Set(), type: '', epic: '', attention: false };
+      state.data = { sprint, ...result, byKey: new Map(result.issues.map((i) => [i.key, i])) };
+      if (!keepFilters) {
+        state.filters = { q: '', people: new Set(), type: '', epic: '', attention: false };
+        state.selected = new Set();
+      }
       showBanner('');
       showScreen('sprint');
       renderAll();
@@ -1910,12 +3845,19 @@
     showConnect('');
   });
   fill($('refreshBtn'), icon('refresh'), 'Refresh');
+  fill($('createBtn'), icon('plus'), 'Create issue');
+  $('createBtn').addEventListener('click', (e) => openCreate(e.currentTarget));
+  $('tabs').addEventListener('click', (e) => {
+    const t = e.target.closest('.tab');
+    if (t) setTab(t.dataset.tab);
+  });
   $('refreshBtn').addEventListener('click', async () => {
     if (!state.source) return;
+    if (currentScreen === 'mine') return loadMine(true);
     try {
       const sprints = await state.source.listSprints(state.boardId);
       state.sprints = sprints;
-      const id = sprints.some((sp) => sp.id === state.sprintId) ? state.sprintId : sprints[0] && sprints[0].id;
+      const id = state.sprintId === BACKLOG || sprints.some((sp) => sp.id === state.sprintId) ? state.sprintId : sprints[0] ? sprints[0].id : BACKLOG;
       if (id != null) await selectSprint(id);
     } catch (err) {
       showBanner(`Couldn't refresh: ${err.message}`);
@@ -1924,7 +3866,7 @@
   $('boardSelect').addEventListener('change', (e) => {
     selectBoard(Number(e.target.value)).catch((err) => showBanner(`Couldn't load the board: ${err.message}`));
   });
-  $('sprintSelect').addEventListener('change', (e) => { selectSprint(Number(e.target.value)); });
+  $('sprintSelect').addEventListener('change', (e) => { selectSprint(e.target.value === BACKLOG ? BACKLOG : Number(e.target.value)); });
   $('metricToggle').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-metric]');
     if (!b || prefs.metric === b.dataset.metric) return;

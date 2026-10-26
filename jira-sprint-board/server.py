@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Local server for the Jira sprint board.
 
-Serves the board page and forwards read-only Jira REST requests to your Jira.
+Serves the board page and forwards Jira REST requests to your Jira.
 Browsers block pages from calling Jira directly (Jira doesn't allow
 cross-origin requests), so the page talks to this server instead.
 
@@ -10,11 +10,13 @@ cross-origin requests), so the page talks to this server instead.
     python3 server.py --insecure     # skip TLS checks, for Jira on a self-signed certificate
 
 The page sends the Jira URL and token with each request. This server keeps
-nothing, only listens on 127.0.0.1, only forwards GET requests to Jira's REST
-API, and never follows redirects (so the token can't be sent to another host).
+nothing, only listens on 127.0.0.1, and never follows redirects (so the token
+can't be sent to another host). It forwards GET requests to Jira's REST API,
+plus only the few writes the "Create issue" form needs (WRITE_ROUTES).
 """
 import argparse
 import json
+import re
 import ssl
 import sys
 import urllib.error
@@ -28,6 +30,17 @@ ROOT = Path(__file__).resolve().parent
 PROXY_PREFIX = "/jira"
 ALLOWED_PATHS = ("/rest/agile/1.0/", "/rest/api/2/", "/rest/greenhopper/1.0/")
 TIMEOUT_SECONDS = 30
+MAX_BODY_BYTES = 64 * 1024
+KEY = r"[A-Za-z][A-Za-z0-9_]*-\d+"
+# Create an issue, then put it in a sprint and epic, estimate it, assign it, and
+# link it to the issue it was cloned from. Moving issues between sprints and the
+# backlog uses the same sprint route plus the backlog one. Editing an issue from
+# its details panel uses the issue, transitions and epic ("none" removes it) routes.
+WRITE_ROUTES = {
+    "POST": [r"/rest/api/2/issue", r"/rest/api/2/issueLink", rf"/rest/api/2/issue/{KEY}/transitions",
+             rf"/rest/agile/1\.0/epic/({KEY}|none)/issue", r"/rest/agile/1\.0/sprint/\d+/issue", r"/rest/agile/1\.0/backlog/issue"],
+    "PUT": [rf"/rest/api/2/issue/{KEY}", rf"/rest/api/2/issue/{KEY}/assignee", rf"/rest/agile/1\.0/issue/{KEY}/estimation"],
+}
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -52,6 +65,32 @@ class Handler(SimpleHTTPRequestHandler):
             return self._proxy()
         return super().do_GET()
 
+    def do_POST(self):
+        self._write("POST")
+
+    def do_PUT(self):
+        self._write("PUT")
+
+    def _write(self, method):
+        # Writes must come from the board page itself: browsers always send Origin
+        # on POST/PUT, and requiring JSON rules out plain HTML form posts.
+        if not self._from_this_machine() or self.headers.get("Origin") is None:
+            return self._json(403, {"error": "Only pages served from localhost can use this server."})
+        if not (self.path == PROXY_PREFIX or self.path.startswith(PROXY_PREFIX + "/")):
+            return self._json(405, {"error": "Only Jira requests can be sent here."})
+        path = urllib.parse.urlsplit(self.path[len(PROXY_PREFIX):]).path
+        if not any(re.fullmatch(route, path) for route in WRITE_ROUTES[method]):
+            return self._json(400, {"error": f"This server doesn't forward {method} {path or '/'}."})
+        if not self.headers.get("Content-Type", "").startswith("application/json"):
+            return self._json(415, {"error": "Send JSON."})
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            length = -1
+        if not 0 <= length <= MAX_BODY_BYTES:
+            return self._json(413, {"error": "Request body is missing or too large."})
+        self._proxy(method, self.rfile.read(length))
+
     def _from_this_machine(self):
         # Checking Host blocks DNS-rebinding; checking Origin blocks other sites
         # in the same browser from using the proxy.
@@ -61,7 +100,7 @@ class Handler(SimpleHTTPRequestHandler):
         origin = self.headers.get("Origin")
         return origin is None or origin in {f"http://{h}" for h in allowed_hosts}
 
-    def _proxy(self):
+    def _proxy(self, method="GET", body=None):
         target = self.path[len(PROXY_PREFIX):]
         path = urllib.parse.urlsplit(target).path
         if not path.startswith(ALLOWED_PATHS) or ".." in path:
@@ -76,10 +115,11 @@ class Handler(SimpleHTTPRequestHandler):
         if not auth.startswith(("Bearer ", "Basic ")):
             return self._json(400, {"error": "Enter your Jira token."})
 
-        request = urllib.request.Request(
-            base + target,
-            headers={"Authorization": auth, "Accept": "application/json", "User-Agent": "jira-sprint-board"},
-        )
+        headers = {"Authorization": auth, "Accept": "application/json", "User-Agent": "jira-sprint-board"}
+        if body is not None:
+            # Jira Server's XSRF check otherwise rejects some REST writes.
+            headers.update({"Content-Type": "application/json", "X-Atlassian-Token": "no-check"})
+        request = urllib.request.Request(base + target, data=body, headers=headers, method=method)
         try:
             with self.opener.open(request, timeout=TIMEOUT_SECONDS) as resp:
                 status, body = resp.status, resp.read()
@@ -118,7 +158,7 @@ class Handler(SimpleHTTPRequestHandler):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Serve the Jira sprint board and proxy Jira REST reads.")
+    parser = argparse.ArgumentParser(description="Serve the Jira sprint board and proxy Jira REST requests.")
     parser.add_argument("--port", type=int, default=8787, help="port to listen on (default 8787)")
     parser.add_argument("--insecure", action="store_true",
                         help="don't verify Jira's TLS certificate (for self-signed certificates)")
