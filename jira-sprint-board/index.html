@@ -472,6 +472,19 @@
   .pick input { width: 16px; height: 16px; accent-color: var(--ink); cursor: pointer; vertical-align: middle; }
   .insights.no-burndown { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 
+  /* ---------- Snapshot ---------- */
+  .snap-wrap { position: fixed; inset: 0; z-index: 55; display: grid; place-items: center; padding: 24px; background: rgba(10, 16, 22, .55); }
+  .snap {
+    width: min(1240px, 100%); max-height: calc(100vh - 48px); overflow: auto; display: grid; gap: 12px;
+    padding: 16px 20px 20px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); box-shadow: 0 20px 60px rgba(10, 16, 22, .3);
+  }
+  .snap-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+  .snap-head h2 { font: 650 18px/1.2 var(--font-display); margin: 0 auto 0 0; }
+  /* Scale the 1200x680 card down to fit the window, keeping its shape. */
+  .snap canvas { display: block; width: auto; height: auto; max-width: 100%; max-height: calc(100vh - 160px); margin: 0 auto; border-radius: 10px; border: 1px solid var(--hair); }
+  .snap-status { font-size: 14px; color: var(--ink-2); min-height: 1.5em; margin: 0; }
+  @media (max-width: 760px) { .snap-wrap { padding: 8px; } .snap { padding: 12px; } }
+
   /* ---------- Toast ---------- */
   .toast {
     position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 70; width: max-content; max-width: min(640px, calc(100vw - 32px));
@@ -534,6 +547,7 @@
       <button type="button" data-metric="issues" aria-pressed="false">Issues</button>
     </div>
     <span class="source-tag" id="sourceTag" hidden></span>
+    <button class="btn" type="button" id="snapshotBtn" hidden></button>
     <button class="btn" type="button" id="refreshBtn" hidden></button>
     <button class="btn primary" type="button" id="createBtn" hidden></button>
     <button class="btn" type="button" id="connectionBtn" hidden>Connection</button>
@@ -595,6 +609,7 @@
 <aside class="drawer closed" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitle" hidden></aside>
 <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<div class="snap-wrap" id="snapshot" role="dialog" aria-modal="true" aria-labelledby="snapTitle" hidden></div>
 
 <script>
 (() => {
@@ -666,6 +681,7 @@
     sort: [['path', { d: 'M5 6.5l3-3 3 3M5 9.5l3 3 3-3', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }]],
     subtask: [['path', { d: 'M3 2.5v6.5a2 2 0 0 0 2 2h8M10 8l3 3-3 3', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.6, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }]],
     dep: [['circle', { cx: 3.5, cy: 8, r: 2.3, fill: 'currentColor' }], ['path', { d: 'M6.5 8h6.2M10 5.2 12.8 8 10 10.8', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.7, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }]],
+    camera: [['path', { d: 'M2 5.5A1.5 1.5 0 0 1 3.5 4h1.7l1-1.5h3.6l1 1.5h1.7A1.5 1.5 0 0 1 14 5.5v6A1.5 1.5 0 0 1 12.5 13h-9A1.5 1.5 0 0 1 2 11.5z', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.5, 'stroke-linejoin': 'round' }], ['circle', { cx: 8, cy: 8.4, r: 2.4, fill: 'none', stroke: 'currentColor', 'stroke-width': 1.5 }]],
     tick: [['path', { d: 'M3.5 8.5l3 3 6-6.5', fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }]],
     copy: [['rect', { x: 5.5, y: 5.5, width: 8.5, height: 8.5, rx: 1.6, fill: 'none', stroke: 'currentColor', 'stroke-width': 1.6 }], ['path', { d: 'M10.5 3.2V2.8A.8.8 0 0 0 9.7 2H2.8a.8.8 0 0 0-.8.8v6.9a.8.8 0 0 0 .8.8h.4', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.6, 'stroke-linecap': 'round' }]],
     chain: [['path', { d: 'M6.8 9.2a2.6 2.6 0 0 0 3.7 0l2.3-2.3a2.6 2.6 0 0 0-3.7-3.7l-.8.8M9.2 6.8a2.6 2.6 0 0 0-3.7 0L3.2 9.1a2.6 2.6 0 0 0 3.7 3.7l.8-.8', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.6, 'stroke-linecap': 'round' }]],
@@ -1033,8 +1049,8 @@
         (sprint ? issuesBySprint[sprint.id] : backlog).push(issue);
         everyIssue.set(key, issue);
         if (input.cloneOf) {
-          link(key, 'related', 'clones', input.cloneOf);
-          link(input.cloneOf, 'related', 'is cloned by', key);
+          link(key, 'cloneOf', 'clones', input.cloneOf);
+          link(input.cloneOf, 'clonedBy', 'is cloned by', key);
         }
         return { key, url: null, warnings: [] };
       },
@@ -1097,7 +1113,11 @@
     return 'other';
   }
   // "is blocked by" / "depends on" mean this issue waits; "blocks" means others wait on it.
+  // Clones are an association with the main story, not a dependency: shown on
+  // the map and cards, never counted as blocking.
   function linkKind(phrase) {
+    if (/is cloned by|has clone/i.test(phrase)) return 'clonedBy';
+    if (/^\s*clones\b|is a clone of|cloned from/i.test(phrase)) return 'cloneOf';
     if (/is blocked by|blocked by|depends on|is dependent on|requires|waits on|is caused by/i.test(phrase)) return 'waitsOn';
     if (/\bblocks\b|is depended on by|is required by|dependency (of|for)|is a prerequisite|causes/i.test(phrase)) return 'blocks';
     return 'related';
@@ -1822,32 +1842,32 @@
       bar, legend, facts, hint);
   }
 
-  function renderVerdict(sprint, t, timeFrac) {
-    const pill = (tone, iconName, label) => h('span', { class: 'status-pill' }, icon(iconName, 'tone-' + tone), label);
+  // The sprint's headline status: { tone, icon, label, text }. No label means plain text only.
+  function verdictInfo(sprint, t, timeFrac) {
     if (!t.total) {
-      return h('p', { class: 'verdict' }, metric() === 'points'
-        ? 'No estimates in this sprint yet. Switch to Issues to track progress by count.'
-        : 'No issues in this sprint yet.');
+      return { text: metric() === 'points' ? 'No estimates in this sprint yet. Switch to Issues to track progress by count.' : 'No issues in this sprint yet.' };
     }
-    if (sprint.state === 'future') {
-      return h('p', { class: 'verdict' }, `Planned: ${fmtVal(t.total)}. Progress tracking starts when the sprint does.`);
-    }
+    if (sprint.state === 'future') return { text: `Planned: ${fmtVal(t.total)}. Progress tracking starts when the sprint does.` };
     const pct = Math.round((t.done / t.total) * 100);
     if (sprint.state === 'closed') {
-      return h('p', { class: 'verdict' },
-        pct === 100 ? pill('good', 'check', 'Completed') : pill('warning', 'alert', 'Partly completed'),
-        h('span', null, `Finished ${fmtVal(t.done)} of ${fmtVal(t.total)} (${pct}%).`));
+      const text = `Finished ${fmtVal(t.done)} of ${fmtVal(t.total)} (${pct}%).`;
+      return pct === 100 ? { tone: 'good', icon: 'check', label: 'Completed', text } : { tone: 'warning', icon: 'alert', label: 'Partly completed', text };
     }
     const expected = t.total * timeFrac;
     const gap = (expected - t.done) / t.total;
     const diff = fmtVal(Math.round(Math.abs(expected - t.done) * 10) / 10);
-    let p, text;
-    if (gap <= -0.05) { p = pill('good', 'up', 'Ahead'); text = `${diff} ahead of the ideal pace for today.`; }
-    else if (gap <= 0.05) { p = pill('good', 'check', 'On track'); text = 'Done work matches the ideal pace for today.'; }
-    else if (gap <= 0.2) { p = pill('warning', 'alert', 'At risk'); text = `${diff} behind the ideal pace for today. The Today line shows where done work should reach.`; }
-    else { p = pill('critical', 'stop', 'Behind'); text = `${diff} behind the ideal pace for today. Consider cutting scope with the team.`; }
-    return h('p', { class: 'verdict' }, p, h('span', null, text));
+    if (gap <= -0.05) return { tone: 'good', icon: 'up', label: 'Ahead', text: `${diff} ahead of the ideal pace for today.`, short: `${diff} ahead of the ideal pace` };
+    if (gap <= 0.05) return { tone: 'good', icon: 'check', label: 'On track', text: 'Done work matches the ideal pace for today.', short: 'Done work matches the ideal pace' };
+    if (gap <= 0.2) return { tone: 'warning', icon: 'alert', label: 'At risk', text: `${diff} behind the ideal pace for today. The Today line shows where done work should reach.`, short: `${diff} behind the ideal pace` };
+    return { tone: 'critical', icon: 'stop', label: 'Behind', text: `${diff} behind the ideal pace for today. Consider cutting scope with the team.`, short: `${diff} behind the ideal pace` };
   }
+  function renderVerdict(sprint, t, timeFrac) {
+    const v = verdictInfo(sprint, t, timeFrac);
+    return v.label
+      ? h('p', { class: 'verdict' }, h('span', { class: 'status-pill' }, icon(v.icon, 'tone-' + v.tone), v.label), h('span', null, v.text))
+      : h('p', { class: 'verdict' }, v.text);
+  }
+
 
   // ======================================================================
   // Rendering: filters
@@ -2090,15 +2110,18 @@
   // ======================================================================
   // Rendering: team load
   // ======================================================================
-  function renderWorkload(issues) {
+  function workloadRows(issues) {
     const groups = new Map();
     for (const i of issues) {
       const id = i.assignee ? i.assignee.id : '__none';
       if (!groups.has(id)) groups.set(id, { id, name: i.assignee ? i.assignee.name : 'Unassigned', issues: [] });
       groups.get(id).issues.push(i);
     }
-    const rows = [...groups.values()].map((g) => ({ ...g, t: totalsByCategory(g.issues) }))
+    return [...groups.values()].map((g) => ({ ...g, t: totalsByCategory(g.issues) }))
       .sort((a, b) => (a.id === '__none') - (b.id === '__none') || b.t.total - a.t.total || a.name.localeCompare(b.name));
+  }
+  function renderWorkload(issues) {
+    const rows = workloadRows(issues);
     const max = Math.max(1, ...rows.map((r) => r.t.total));
     const f = state.filters;
 
@@ -2136,12 +2159,16 @@
   // ======================================================================
   // Rendering: needs attention
   // ======================================================================
-  function renderAttention(issues) {
+  function attentionItems(issues) {
     const sp = state.data.sprint;
     const { now, timeFrac } = sprintTime(sp);
-    const items = issues.map((i) => ({ issue: i, reasons: attentionReasons(i, sp, timeFrac, now) }))
+    return issues.map((i) => ({ issue: i, reasons: attentionReasons(i, sp, timeFrac, now).sort((a, b) => b.rank - a.rank) }))
       .filter((x) => x.reasons.length)
-      .sort((a, b) => Math.max(...b.reasons.map((r) => r.rank)) - Math.max(...a.reasons.map((r) => r.rank)) || b.issue.priorityRank - a.issue.priorityRank);
+      .sort((a, b) => b.reasons[0].rank - a.reasons[0].rank || b.issue.priorityRank - a.issue.priorityRank);
+  }
+  function renderAttention(issues) {
+    const sp = state.data.sprint;
+    const items = attentionItems(issues);
 
     const list = h('ul', { class: 'attention-list' }, items.map(({ issue, reasons }) => h('li', null,
       h('button', { type: 'button', class: 'attention-item', onclick: (e) => openDrawer(issue, e.currentTarget) },
@@ -2179,6 +2206,8 @@
 
   function depLines(issue) {
     if (issue.category === 'done' || !issue.links.length) return null;
+    const cloneOf = issue.links.filter((l) => l.kind === 'cloneOf').map(resolveLink);
+    const clones = issue.links.filter((l) => l.kind === 'clonedBy').map(resolveLink);
     const waits = issue.links.filter((l) => l.kind === 'waitsOn').map(resolveLink);
     const open = waits.filter((l) => l.category !== 'done');
     const blocks = issue.links.filter((l) => l.kind === 'blocks').map(resolveLink).filter((l) => l.category !== 'done');
@@ -2190,6 +2219,10 @@
         h('span', null, waits.length === 1 ? 'Dependency finished' : 'Dependencies finished')) : null,
       blocks.length ? h('span', { class: 'dep-line', title: `${describe(blocks)} wait on this` }, icon('dep', 'tone-muted'),
         h('span', null, 'Blocks ', h('strong', null, keyList(blocks)))) : null,
+      cloneOf.length ? h('span', { class: 'dep-line', title: `Cloned from ${describe(cloneOf)}` }, icon('copy', 'tone-muted'),
+        h('span', null, 'Clone of ', h('strong', null, keyList(cloneOf)))) : null,
+      clones.length ? h('span', { class: 'dep-line', title: `Clones: ${describe(clones)}` }, icon('copy', 'tone-muted'),
+        h('span', null, 'Cloned to ', h('strong', null, keyList(clones)))) : null,
     ];
   }
 
@@ -2271,14 +2304,17 @@
     for (const i of issues) {
       for (const l of i.links) {
         if (l.kind === 'related') continue;
-        const [from, to] = l.kind === 'waitsOn' ? [l.key, i.key] : [i.key, l.key];
-        if (from === to || edges.has(from + '>' + to)) continue;
+        // Dependency edges run from the prerequisite; clone edges from the main story.
+        const kind = l.kind === 'cloneOf' || l.kind === 'clonedBy' ? 'clone' : 'dep';
+        const [from, to] = l.kind === 'waitsOn' || l.kind === 'cloneOf' ? [l.key, i.key] : [i.key, l.key];
+        const id = `${kind}:${from}>${to}`;
+        if (from === to || edges.has(id)) continue;
         node(i.key); node(l.key, l);
-        edges.set(from + '>' + to, { id: from + '>' + to, from, to });
+        edges.set(id, { id, from, to, kind });
       }
     }
     const info = (n) => n.issue || n.link;
-    for (const e of edges.values()) e.open = info(nodes.get(e.from)).category !== 'done';
+    for (const e of edges.values()) e.open = e.kind === 'dep' && info(nodes.get(e.from)).category !== 'done';
     return { nodes, edges: [...edges.values()], info };
   }
 
@@ -2382,10 +2418,20 @@
     const g = dependencyGraph(issues);
     if (!g.edges.length) {
       return h('p', { class: 'empty-note' }, filtersActive()
-        ? 'None of the filtered issues have dependencies.'
-        : `No dependencies in ${isBacklog() ? 'the backlog' : 'this sprint'}. Link issues in Jira with "blocks" or "is blocked by" to see them here.`);
+        ? 'None of the filtered issues have dependencies or clones.'
+        : `No dependencies or clones in ${isBacklog() ? 'the backlog' : 'this sprint'}. Link issues in Jira with "blocks" or "is blocked by", or clone a story, to see them here.`);
     }
     const L = layoutGraph(g);
+    // Waiting/blocking only counts dependency links; clones are listed separately.
+    const depPreds = new Map([...g.nodes.keys()].map((k) => [k, []]));
+    const depSuccs = new Map([...g.nodes.keys()].map((k) => [k, []]));
+    const mainOf = new Map([...g.nodes.keys()].map((k) => [k, []]));
+    const clonesOf = new Map([...g.nodes.keys()].map((k) => [k, []]));
+    for (const e of g.edges) {
+      if (e.kind === 'dep') { depPreds.get(e.to).push(e.from); depSuccs.get(e.from).push(e.to); }
+      else { mainOf.get(e.to).push(e.from); clonesOf.get(e.from).push(e.to); }
+    }
+    const cloneEdges = g.edges.filter((e) => e.kind === 'clone').length;
     const waiting = issues.filter((i) => waitsOnOpen(i).length);
     const outside = [...g.nodes.values()].filter((n) => n.external);
     let longest = 0;
@@ -2393,7 +2439,7 @@
     const chain = (k, guard = 0) => {
       if (depth.has(k)) return depth.get(k);
       if (guard > 200) return 1;
-      const d = 1 + Math.max(0, ...L.preds.get(k).map((p) => chain(p, guard + 1)));
+      const d = 1 + Math.max(0, ...depPreds.get(k).map((p) => chain(p, guard + 1)));
       depth.set(k, d);
       return d;
     };
@@ -2404,15 +2450,18 @@
         h('span', null, h('strong', null, plural(waiting.length, 'issue', 'issues')), ' waiting on unfinished work')),
       outside.length ? h('span', { class: 'key' }, h('span', { class: 'swatch', style: 'border:1px dashed var(--ink-2)' }),
         h('span', null, h('strong', null, String(outside.length)), ` linked ${outside.length === 1 ? 'issue' : 'issues'} outside ${isBacklog() ? 'the backlog' : 'this sprint'}`)) : null,
-      longest >= 3 ? h('span', { class: 'key' }, h('span', null, 'Longest chain ', h('strong', null, plural(longest, 'issue', 'issues')))) : null);
+      longest >= 3 ? h('span', { class: 'key' }, h('span', null, 'Longest chain ', h('strong', null, plural(longest, 'issue', 'issues')))) : null,
+      cloneEdges ? h('span', { class: 'key' }, icon('copy', 'tone-muted'),
+        h('span', null, h('strong', null, plural(cloneEdges, 'clone', 'clones')), ' linked to their main story')) : null);
     const legend = h('div', { class: 'legend' },
       h('span', { class: 'key' }, lineKey('var(--critical)'), 'Still blocking'),
       h('span', { class: 'key' }, h('span', { class: 'line-key', style: 'background:repeating-linear-gradient(90deg,var(--muted) 0 4px,transparent 4px 7px)' }), 'Finished'),
-      h('span', { class: 'muted' }, 'Arrows point from the work that must finish first. Hover an issue to trace its chain.'));
+      cloneEdges ? h('span', { class: 'key' }, h('span', { class: 'line-key', style: 'background:repeating-linear-gradient(90deg,var(--ink-2) 0 2px,transparent 2px 5px)' }), 'Clone of (not blocking)') : null,
+      h('span', { class: 'muted' }, 'Arrows point from the work that must finish first, or from the main story to its clones. Hover an issue to trace its chain.'));
 
     const map = h('div', { class: 'depmap', style: `width:${L.width}px;height:${L.height}px` });
     const svg = s('svg', { class: 'edges', width: L.width, height: L.height, 'aria-hidden': 'true' },
-      s('defs', null, ...[['open', 'var(--critical)'], ['done', 'var(--muted)']].map(([id, color]) =>
+      s('defs', null, ...[['open', 'var(--critical)'], ['done', 'var(--muted)'], ['clone', 'var(--ink-2)']].map(([id, color]) =>
         s('marker', { id: 'arrow-' + id, viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: 'auto-start-reverse' },
           s('path', { d: 'M0 0L10 5L0 10z', fill: color })))));
     const edgeEls = new Map();
@@ -2425,10 +2474,12 @@
         const bend = Math.max(24, (x2 - x1) / 2);
         d += `C${x1 + bend} ${y1} ${x2 - bend} ${y2} ${x2} ${y2}`;
       }
+      const style = e.kind === 'clone' ? { stroke: 'var(--ink-2)', width: 2, dash: '0.1 5', marker: 'clone' }
+        : e.open ? { stroke: 'var(--critical)', width: 2, dash: null, marker: 'open' }
+        : { stroke: 'var(--muted)', width: 1.5, dash: '4 3', marker: 'done' };
       const path = s('path', {
-        class: 'edge', d, fill: 'none',
-        stroke: e.open ? 'var(--critical)' : 'var(--muted)', 'stroke-width': e.open ? 2 : 1.5,
-        'stroke-dasharray': e.open ? null : '4 3', 'marker-end': `url(#arrow-${e.open ? 'open' : 'done'})`,
+        class: 'edge', d, fill: 'none', stroke: style.stroke, 'stroke-width': style.width,
+        'stroke-dasharray': style.dash, 'stroke-linecap': e.kind === 'clone' ? 'round' : null, 'marker-end': `url(#arrow-${style.marker})`,
       });
       edgeEls.set(e.id, path);
       svg.append(path);
@@ -2450,9 +2501,11 @@
       const p = L.pos.get(key);
       const it = g.info(n);
       const waitingHere = n.issue && waitsOnOpen(n.issue).length;
-      const ups = L.preds.get(key).length, downs = L.succs.get(key).length;
       const label = `${key}: ${it.summary}. ${it.status}.` + (n.external ? ' Not in this sprint.' : '') +
-        (ups ? ` Waits on ${L.preds.get(key).join(', ')}.` : '') + (downs ? ` Blocks ${L.succs.get(key).join(', ')}.` : '');
+        (depPreds.get(key).length ? ` Waits on ${depPreds.get(key).join(', ')}.` : '') +
+        (depSuccs.get(key).length ? ` Blocks ${depSuccs.get(key).join(', ')}.` : '') +
+        (mainOf.get(key).length ? ` Clone of ${mainOf.get(key).join(', ')}.` : '') +
+        (clonesOf.get(key).length ? ` Cloned to ${clonesOf.get(key).join(', ')}.` : '');
       const props = {
         class: 'dep-node' + (n.external ? ' external' : '') + (waitingHere ? ' waiting' : ''),
         style: `left:${p.x}px;top:${p.y}px`, 'aria-label': label, title: n.external ? 'Not in this sprint' : null,
@@ -2474,13 +2527,14 @@
     }
 
     const rows = g.edges.map((e) => ({ e, from: g.info(g.nodes.get(e.from)), to: g.info(g.nodes.get(e.to)) }))
-      .sort((a, b) => b.e.open - a.e.open || a.e.to.localeCompare(b.e.to));
+      .sort((a, b) => (a.e.kind === 'clone') - (b.e.kind === 'clone') || b.e.open - a.e.open || a.e.to.localeCompare(b.e.to));
     const table = h('details', { class: 'data-table' },
       h('summary', null, 'Show as table'),
       h('table', { class: 'mini-table' },
-        h('thead', null, h('tr', null, h('th', null, 'Issue'), h('th', null, 'Waits on'), h('th', null, 'Its status'), h('th', null, 'Blocking now'))),
+        h('thead', null, h('tr', null, h('th', null, 'Issue'), h('th', null, 'Link'), h('th', null, 'Other issue'), h('th', null, 'Its status'), h('th', null, 'Blocking now'))),
         h('tbody', null, rows.map(({ e, from, to }) => h('tr', null,
           h('td', null, `${e.to}  ${to.summary}`),
+          h('td', null, e.kind === 'clone' ? 'Clone of' : 'Waits on'),
           h('td', null, `${e.from}  ${from.summary}` + (g.nodes.get(e.from).external ? ' (outside sprint)' : '')),
           h('td', null, from.status),
           h('td', null, e.open ? 'Yes' : 'No'))))));
@@ -2823,6 +2877,8 @@
     const groups = [
       ['Waits on', issue.links.filter((l) => l.kind === 'waitsOn')],
       ['Blocks', issue.links.filter((l) => l.kind === 'blocks')],
+      ['Clone of', issue.links.filter((l) => l.kind === 'cloneOf')],
+      ['Cloned to', issue.links.filter((l) => l.kind === 'clonedBy')],
       ['Other links', issue.links.filter((l) => l.kind === 'related')],
     ].filter(([, list]) => list.length);
     const item = (raw, showPhrase) => {
@@ -3169,6 +3225,7 @@
   }
   scrim.addEventListener('click', closeDrawer);
   document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !snapEl.hidden) { closeSnapshot(); return; }
     if (e.key === 'Escape' && !drawer.hidden) closeDrawer();
     if (e.key === 'Tab' && !drawer.hidden) {
       const focusables = [...drawer.querySelectorAll('button, a[href], input, select, textarea, [tabindex="0"]')].filter((el) => !el.disabled);
@@ -3471,6 +3528,340 @@
   }
 
   // ======================================================================
+  // Snapshot: one compact image of the sprint, sized for a chat message
+  // ======================================================================
+  const snapEl = $('snapshot');
+  let snapReturnFocus = null;
+
+  function openSnapshot(from) {
+    if (!state.data || isBacklog()) return;
+    snapReturnFocus = from || null;
+    const canvas = h('canvas', { role: 'img', 'aria-label': snapshotText() });
+    const status = h('p', { class: 'snap-status', 'aria-live': 'polite' });
+    const say = (msg) => { status.textContent = msg; };
+    const sp = state.data.sprint;
+    const fileName = `${sp.name.replace(/[^\w.-]+/g, '-').toLowerCase()}-${new Date().toISOString().slice(0, 10)}.png`;
+    const copyBtn = h('button', { type: 'button', class: 'btn primary' }, icon('copy'), 'Copy image');
+    copyBtn.addEventListener('click', async () => {
+      try {
+        // A promise keeps Safari's user-gesture rule happy.
+        const blob = new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        say('Copied. Paste it into a Teams or Slack message.');
+      } catch (e) {
+        say('This browser didn\'t allow copying the image. Use Download PNG instead.');
+      }
+    });
+    const downloadBtn = h('button', { type: 'button', class: 'btn' }, 'Download PNG');
+    downloadBtn.addEventListener('click', () => {
+      canvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = h('a', { href: url, download: fileName });
+        document.body.append(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        say(`Saved ${fileName}.`);
+      }, 'image/png');
+    });
+    const textBtn = h('button', { type: 'button', class: 'btn' }, 'Copy as text');
+    textBtn.addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(snapshotText()); say('Copied the summary as text.'); }
+      catch (e) { say('This browser didn\'t allow copying text here.'); }
+    });
+    const closeBtn = h('button', { type: 'button', class: 'btn', 'aria-label': 'Close snapshot', onclick: closeSnapshot }, icon('close'), 'Close');
+    fill(snapEl, h('div', { class: 'snap' },
+      h('div', { class: 'snap-head' }, h('h2', { id: 'snapTitle' }, `Snapshot of ${sp.name}`), copyBtn, downloadBtn, textBtn, closeBtn),
+      canvas, status));
+    snapEl.hidden = false;
+    copyBtn.focus();
+    drawSnapshot(canvas).catch((err) => say(`Couldn't draw the snapshot: ${err.message}`));
+  }
+  function closeSnapshot() {
+    if (snapEl.hidden) return;
+    snapEl.hidden = true;
+    fill(snapEl);
+    if (snapReturnFocus && document.contains(snapReturnFocus)) snapReturnFocus.focus();
+  }
+  snapEl.addEventListener('click', (e) => { if (e.target === snapEl) closeSnapshot(); });
+
+  // The same summary as plain text, for a chat message.
+  function snapshotText() {
+    const { sprint, issues, addedKeys, removedCount } = state.data;
+    const T = sprintTime(sprint);
+    const t = totalsByCategory(issues);
+    const v = verdictInfo(sprint, t, T.timeFrac);
+    const stateText = { active: 'Active', closed: 'Closed', future: 'Upcoming' }[sprint.state] || sprint.state;
+    const left = sprint.state === 'active' ? Math.max(0, Math.ceil(T.days.length - T.elapsed - 0.001)) : null;
+    const lines = [
+      `${sprint.name}: ${stateText}, ${fmtDay.format(sprint.start)} – ${fmtDay.format(sprint.end)}` + (left != null ? `, ${plural(left, 'working day', 'working days')} left` : ''),
+      `Goal: ${sprint.goal || 'none set'}`,
+      `Status: ${v.label ? `${v.label}. ${v.short || v.text}` : v.text}`,
+      t.total ? `Progress: ${fmtNum(t.done)} of ${fmtVal(t.total)} done (${Math.round((t.done / t.total) * 100)}%), ${fmtNum(t.progress)} in progress, ${fmtNum(t.todo)} to do.` +
+        (addedKeys && addedKeys.size ? ` ${plural(addedKeys.size, 'issue', 'issues')} added after start.` : '') + (removedCount ? ` ${plural(removedCount, 'issue', 'issues')} removed.` : '') : null,
+    ];
+    const att = attentionItems(issues);
+    if (att.length) {
+      lines.push('', `Needs attention (${att.length}):`);
+      for (const { issue, reasons } of att.slice(0, 6)) lines.push(`- ${issue.key} ${issue.summary}: ${reasons.map((r) => r.text).join(', ')}`);
+      if (att.length > 6) lines.push(`- and ${att.length - 6} more`);
+    }
+    const load = workloadRows(issues).filter((r) => r.t.total > 0);
+    if (load.length) {
+      lines.push('', 'Team load:');
+      for (const r of load) lines.push(`- ${r.name}: ${fmtVal(r.t.total)} (${fmtNum(r.t.done)} done, ${fmtNum(r.t.progress)} in progress, ${fmtNum(r.t.todo)} to do)`);
+    }
+    return lines.filter((l) => l != null).join('\n');
+  }
+
+  // Draws the snapshot at 2x for sharp text. Colours come from the page's
+  // current theme so the image matches what's on screen.
+  async function drawSnapshot(canvas) {
+    const W = 1200, H = 680, S = 2, PAD = 48;
+    const UI = '"Atkinson Hyperlegible", system-ui, sans-serif';
+    const DISPLAY = '"Bricolage Grotesque", "Atkinson Hyperlegible", system-ui, sans-serif';
+    await Promise.all([`700 34px ${DISPLAY}`, `650 16px ${DISPLAY}`, `400 14px ${UI}`, `700 14px ${UI}`]
+      .map((f) => document.fonts.load(f).catch(() => null)));
+    canvas.width = W * S;
+    canvas.height = H * S;
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(S, 0, 0, S, 0, 0);
+    const css = getComputedStyle(document.documentElement);
+    const C = (name) => css.getPropertyValue(name).trim() || '#888';
+    const font = (weight, size, family = UI) => `${weight} ${size}px ${family}`;
+    const fit = (str, max) => {
+      str = String(str);
+      if (ctx.measureText(str).width <= max) return str;
+      let lo = 0, hi = str.length;
+      while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (ctx.measureText(str.slice(0, mid) + '…').width <= max) lo = mid; else hi = mid - 1; }
+      return str.slice(0, lo).trimEnd() + '…';
+    };
+    const text = (str, x, y, { f = font(400, 14), color = C('--ink'), align = 'left', max } = {}) => {
+      ctx.font = f; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = 'alphabetic';
+      const out = max ? fit(str, max) : String(str);
+      ctx.fillText(out, x, y);
+      return ctx.measureText(out).width;
+    };
+    const wrap = (str, x, y, max, lh, maxLines, f, color) => {
+      ctx.font = f;
+      const lines = [];
+      let line = '';
+      for (const w of String(str).split(/\s+/)) {
+        const tryLine = line ? `${line} ${w}` : w;
+        if (!line || ctx.measureText(tryLine).width <= max) line = tryLine; else { lines.push(line); line = w; }
+      }
+      if (line) lines.push(line);
+      const shown = lines.slice(0, maxLines);
+      if (lines.length > maxLines) shown[maxLines - 1] = fit(lines.slice(maxLines - 1).join(' '), max);
+      shown.forEach((l, n) => text(l, x, y + n * lh, { f, color }));
+      return shown.length;
+    };
+    const shape = (x, y, w, h, r) => { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); };
+    const box = (x, y, w, h, r, fillColor, strokeColor) => {
+      shape(x, y, w, h, r);
+      if (fillColor) { ctx.fillStyle = fillColor; ctx.fill(); }
+      if (strokeColor) { ctx.strokeStyle = strokeColor; ctx.lineWidth = 1; ctx.stroke(); }
+    };
+    const dot = (x, y, r, color) => { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = color; ctx.fill(); };
+    // A pill with a coloured status dot; the label always carries the meaning.
+    const pill = (x, y, label, { tone, dark } = {}) => {
+      ctx.font = font(700, 13);
+      const w = ctx.measureText(label).width + (tone ? 34 : 22);
+      box(x, y, w, 24, 12, dark ? C('--ink') : C('--card'), dark ? null : C('--line'));
+      if (tone) dot(x + 14, y + 12, 4.5, C('--' + tone));
+      text(label, x + (tone ? 24 : 11), y + 16.5, { f: font(700, 13), color: dark ? C('--card') : C('--ink') });
+      return w;
+    };
+
+    const { sprint, issues, addedKeys, removedCount } = state.data;
+    const T = sprintTime(sprint);
+    const t = totalsByCategory(issues);
+    const v = verdictInfo(sprint, t, T.timeFrac);
+    const stateText = { active: 'Active', closed: 'Closed', future: 'Upcoming' }[sprint.state] || sprint.state;
+    const board = (state.boards.find((b) => b.id === state.boardId) || {}).name || '';
+
+    // Background
+    ctx.fillStyle = C('--wall');
+    ctx.fillRect(0, 0, W, H);
+
+    // Header: sprint, state, dates, time left; board and timestamp on the right
+    let x = PAD;
+    x += text(sprint.name, x, 60, { f: font(700, 17, DISPLAY) }) + 12;
+    x += pill(x, 43, stateText, { dark: sprint.state === 'active' }) + 12;
+    const left = sprint.state === 'active' ? Math.max(0, Math.ceil(T.days.length - T.elapsed - 0.001)) : null;
+    const meta = [`${fmtDay.format(sprint.start)} – ${fmtDay.format(sprint.end)}`,
+      left != null ? (left === 0 ? 'Last working day' : `${plural(left, 'working day', 'working days')} left`) : null,
+      plural(issues.length, 'issue', 'issues')].filter(Boolean);
+    for (const m of meta) x += text(m, x, 60, { color: C('--ink-2') }) + 16;
+    text(`${board}${board ? ', ' : ''}${fmtDateTime.format(new Date())}`, W - PAD, 60, { f: font(400, 13), color: C('--muted'), align: 'right', max: 360 });
+
+    // Goal
+    const goalLines = wrap(sprint.goal || 'This sprint has no goal set', PAD, 112, W - PAD * 2, 40, 2,
+      font(700, 34, DISPLAY), sprint.goal ? C('--ink') : C('--muted'));
+    let y = 112 + (goalLines - 1) * 40 + 30;
+
+    // Verdict
+    if (v.label) {
+      const w = pill(PAD, y, v.label, { tone: v.tone });
+      text(v.short || v.text, PAD + w + 12, y + 17, { f: font(400, 15), color: C('--ink-2'), max: W - PAD * 2 - w - 12 });
+    } else {
+      text(v.text, PAD, y + 17, { f: font(400, 15), color: C('--ink-2'), max: W - PAD * 2 });
+    }
+    y += 46;
+
+    // Time and work bars, with the Today line across both
+    const bx = PAD + 52, bw = W - PAD - bx;
+    text('Time', PAD, y + 11, { f: font(700, 12), color: C('--muted') });
+    const n = T.days.length;
+    if (n) {
+      const cw = (bw - 2 * (n - 1)) / n;
+      T.days.forEach((d, idx) => {
+        const end = addDays(d, 1);
+        const p = T.now >= end ? 1 : T.now > d ? (T.now - d) / (end - d) : 0;
+        const cx = bx + idx * (cw + 2);
+        box(cx, y, cw, 14, 3, C('--card'), C('--hair'));
+        if (p > 0) box(cx, y, cw * p, 14, 3, C('--elapsed'));
+      });
+    }
+    const wy = y + 24;
+    text('Work', PAD, wy + 13, { f: font(700, 12), color: C('--muted') });
+    box(bx, wy, bw, 18, 4, C('--card'), C('--hair'));
+    if (t.total) {
+      ctx.save();
+      shape(bx, wy, bw, 18, 4);
+      ctx.clip();
+      let sx = bx;
+      for (const st of STATE_ORDER) {
+        const segW = (t[st.cat] / t.total) * bw;
+        if (segW <= 0) continue;
+        ctx.fillStyle = C('--st-' + st.cat);
+        ctx.fillRect(sx, wy, Math.max(0, segW - 2), 18);
+        sx += segW;
+      }
+      ctx.restore();
+    }
+    if (sprint.state !== 'future' && n) {
+      const tx = bx + T.timeFrac * bw;
+      ctx.fillStyle = C('--ink');
+      ctx.fillRect(tx - 1, y - 6, 2, wy + 18 + 6 - (y - 6));
+      const tag = sprint.state === 'closed' ? 'Closed' : 'Today';
+      ctx.font = font(700, 11);
+      const tw = ctx.measureText(tag).width + 12;
+      const tagX = clamp(tx - tw / 2, bx, bx + bw - tw);
+      box(tagX, y - 22, tw, 15, 3, C('--accent'));
+      text(tag, tagX + 6, y - 11, { f: font(700, 11), color: '#14202b' });
+    }
+
+    // Legend
+    let lx = PAD;
+    const ly = wy + 44;
+    for (const st of STATE_ORDER) {
+      box(lx, ly - 10, 11, 11, 3, C('--st-' + st.cat));
+      lx += 17;
+      lx += text(`${st.label} `, lx, ly, { color: C('--ink-2') });
+      lx += text(fmtVal(t[st.cat]), lx, ly, { f: font(700, 14) });
+      if (st.cat === 'done' && t.total) lx += text(` (${Math.round((t.done / t.total) * 100)}%)`, lx, ly, { color: C('--ink-2') });
+      lx += 22;
+    }
+    if (addedKeys && addedKeys.size) { lx += text('Added after start ', lx, ly, { color: C('--ink-2') }); lx += text(String(addedKeys.size), lx, ly, { f: font(700, 14) }) + 22; }
+    if (removedCount) { lx += text('Removed ', lx, ly, { color: C('--ink-2') }); text(String(removedCount), lx, ly, { f: font(700, 14) }); }
+
+    // Three panels: burndown, team load, needs attention
+    const py = ly + 24, ph = H - 40 - py, gap = 20;
+    const pw = (W - PAD * 2 - gap * 2) / 3;
+    const panel = (px, title, sub) => {
+      box(px, py, pw, ph, 12, C('--card'), C('--line'));
+      text(title, px + 16, py + 28, { f: font(650, 16, DISPLAY) });
+      if (sub) text(sub, px + 16, py + 46, { f: font(400, 12), color: C('--muted'), max: pw - 32 });
+    };
+
+    // Burndown
+    const p1 = PAD;
+    panel(p1, 'Burndown', `Remaining ${metric() === 'issues' ? 'issues' : state.config.estimate.unit === 'h' ? 'hours' : 'points'} vs ideal pace`);
+    const model = burndownModel(issues, sprint);
+    if (model.days.length) {
+      const gx = p1 + 44, gw = pw - 44 - 28, gy = py + 64, gh = ph - 64 - 30;
+      const ticks = niceTicks(Math.max(model.total, ...model.points.map((q) => q.actual || 0)));
+      const yMax = ticks[ticks.length - 1] || 1;
+      const X = (v2) => gx + (v2 / model.days.length) * gw;
+      const Y = (v2) => gy + gh * (1 - v2 / yMax);
+      for (const tk of [0, yMax]) {
+        ctx.fillStyle = tk === 0 ? C('--line') : C('--hair');
+        ctx.fillRect(gx, Y(tk), gw, 1);
+        text(fmtNum(tk), gx - 8, Y(tk) + 4, { f: font(400, 11), color: C('--muted'), align: 'right' });
+      }
+      const line = (pts, color, width) => {
+        ctx.beginPath();
+        pts.forEach(([a, b], k) => (k ? ctx.lineTo(X(a), Y(b)) : ctx.moveTo(X(a), Y(b))));
+        ctx.strokeStyle = color; ctx.lineWidth = width; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.stroke();
+      };
+      line(model.points.map((q) => [q.x, q.ideal]), C('--muted'), 1.5);
+      const act = model.points.filter((q) => q.actual != null).map((q) => [q.x, q.actual]);
+      if (model.nowPoint) act.push([model.nowPoint.x, model.nowPoint.actual]);
+      if (act.length) {
+        line(act, C('--series-1'), 2.5);
+        const [lxp, lyp] = act[act.length - 1];
+        dot(X(lxp), Y(lyp), 5, C('--card'));
+        dot(X(lxp), Y(lyp), 3.5, C('--series-1'));
+        text(fmtNum(lyp), X(lxp) + 8, Y(lyp) - 6, { f: font(700, 12), color: C('--ink-2') });
+      }
+      text(fmtDay.format(model.days[0]), gx, gy + gh + 18, { f: font(400, 11), color: C('--muted') });
+      text(fmtDay.format(model.days[model.days.length - 1]), gx + gw, gy + gh + 18, { f: font(400, 11), color: C('--muted'), align: 'right' });
+      // Key
+      box(p1 + pw - 140, py + 20, 14, 2.5, 1, C('--series-1'));
+      text('Remaining', p1 + pw - 120, py + 25, { f: font(400, 12), color: C('--ink-2') });
+      box(p1 + pw - 140, py + 36, 14, 1.5, 1, C('--muted'));
+      text('Ideal', p1 + pw - 120, py + 41, { f: font(400, 12), color: C('--ink-2') });
+    } else {
+      text('No sprint dates yet.', p1 + 16, py + 80, { color: C('--muted') });
+    }
+
+    // Team load
+    const p2 = PAD + pw + gap;
+    panel(p2, 'Team load', 'Done, in progress and to do per person');
+    const rows = workloadRows(issues);
+    const maxV = Math.max(1, ...rows.map((r) => r.t.total));
+    const rowH = 26, fitRows = Math.floor((ph - 66) / rowH);
+    const showRows = rows.length > fitRows ? rows.slice(0, fitRows - 1) : rows;
+    const nameW = 112, barX = p2 + 16 + nameW + 8, barMax = pw - 16 - nameW - 8 - 16 - 56;
+    showRows.forEach((r, k) => {
+      const ry = py + 66 + k * rowH;
+      text(r.name, p2 + 16, ry + 13, { f: font(400, 13), color: C('--ink'), max: nameW });
+      let sx = barX;
+      const full = (r.t.total / maxV) * barMax;
+      for (const st of STATE_ORDER) {
+        const w = r.t.total ? (r.t[st.cat] / r.t.total) * full : 0;
+        if (w <= 0) continue;
+        box(sx, ry + 2, Math.max(1, w - 2), 12, 2, C('--st-' + st.cat));
+        sx += w;
+      }
+      text(fmtVal(r.t.total), barX + full + 6, ry + 13, { f: font(400, 12), color: C('--ink-2') });
+    });
+    if (showRows.length < rows.length) text(`and ${plural(rows.length - showRows.length, 'more person', 'more people')}`, p2 + 16, py + 66 + showRows.length * rowH + 13, { f: font(400, 12), color: C('--muted') });
+
+    // Needs attention
+    const p3 = PAD + (pw + gap) * 2;
+    const att = attentionItems(issues);
+    panel(p3, `Needs attention${att.length ? ` (${att.length})` : ''}`, 'Blocked, waiting, stalled or missing owners');
+    const itemH = 42, fitItems = Math.floor((ph - 64) / itemH);
+    const showItems = att.length > fitItems ? att.slice(0, fitItems - 1) : att;
+    if (!att.length) text('Nothing needs attention right now.', p3 + 16, py + 82, { color: C('--muted') });
+    showItems.forEach(({ issue, reasons }, k) => {
+      const iy = py + 66 + k * itemH;
+      ctx.font = font(700, 12);
+      const kw = text(issue.key, p3 + 16, iy + 12, { f: font(700, 12), color: C('--muted') });
+      text(issue.summary, p3 + 16 + kw + 8, iy + 12, { f: font(400, 13), max: pw - 32 - kw - 8 });
+      dot(p3 + 20, iy + 26, 3.5, C('--' + (reasons[0].tone === 'muted' ? 'muted' : reasons[0].tone)));
+      text(reasons.map((r) => r.text).join(', '), p3 + 30, iy + 30, { f: font(400, 12), color: C('--ink-2'), max: pw - 46 });
+    });
+    if (showItems.length < att.length) text(`and ${att.length - showItems.length} more`, p3 + 16, py + 66 + showItems.length * itemH + 12, { f: font(400, 12), color: C('--muted') });
+
+    // Footer
+    text(`Sprint board${state.source.kind === 'demo' ? ', demo data' : ''}`, PAD, H - 16, { f: font(400, 12), color: C('--muted') });
+    text(`Measured in ${metric() === 'issues' ? 'issue counts' : state.config.estimate.unit === 'h' ? 'hours' : 'story points'}`, W - PAD, H - 16, { f: font(400, 12), color: C('--muted'), align: 'right' });
+  }
+
+  // ======================================================================
   // Toast
   // ======================================================================
   const toast = $('toast');
@@ -3659,6 +4050,7 @@
     $('pickers').hidden = !(name === 'sprint' || (name === 'note' && connected && state.boards.length));
     $('metricToggle').hidden = name !== 'sprint' || !usesEstimates();
     $('refreshBtn').hidden = !(name === 'sprint' || name === 'mine');
+    $('snapshotBtn').hidden = name !== 'sprint' || isBacklog();
     $('createBtn').hidden = !connected || !state.boardId || !state.source.createIssue;
     $('connectionBtn').hidden = name === 'connect';
     $('sourceTag').hidden = !connected;
@@ -3846,6 +4238,8 @@
   });
   fill($('refreshBtn'), icon('refresh'), 'Refresh');
   fill($('createBtn'), icon('plus'), 'Create issue');
+  fill($('snapshotBtn'), icon('camera'), 'Snapshot');
+  $('snapshotBtn').addEventListener('click', (e) => openSnapshot(e.currentTarget));
   $('createBtn').addEventListener('click', (e) => openCreate(e.currentTarget));
   $('tabs').addEventListener('click', (e) => {
     const t = e.target.closest('.tab');
