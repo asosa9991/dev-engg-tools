@@ -1,0 +1,1964 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sprint Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,500..800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: light;
+    --wall: #e7ecf1;
+    --card: #ffffff;
+    --raised: #f3f6f9;
+    --ink: #14202b;
+    --ink-2: #485664;
+    --muted: #6c7986;
+    --line: #cfd7df;
+    --hair: #e1e7ed;
+    --elapsed: #8e9ba8;
+    --accent: #ffd03a;          /* highlighter yellow: the Today marker, nothing else */
+    --focus: #1c5cab;
+    --series-1: #2a78d6;
+    --st-todo: #86b6ef;         /* ordinal blue ramp: to do -> in progress -> done */
+    --st-progress: #3987e5;
+    --st-done: #1c5cab;
+    --good: #0ca30c;
+    --warning: #fab219;
+    --serious: #ec835a;
+    --critical: #d03b3b;
+    --epic-1: #2a78d6; --epic-2: #eb6834; --epic-3: #1baf7a; --epic-4: #eda100;
+    --epic-5: #e87ba4; --epic-6: #008300; --epic-7: #6250d6; --epic-8: #e34948;
+    --type-story: #1baf7a; --type-bug: #e34948; --type-task: #2a78d6; --type-spike: #6250d6; --type-other: #6c7986;
+    --font-ui: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-display: "Bricolage Grotesque", "Atkinson Hyperlegible", system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --wall: #0e1318; --card: #18202a; --raised: #1f2833; --ink: #e7edf3; --ink-2: #b3bfcb;
+      --muted: #8592a0; --line: #2b3642; --hair: #222b35; --elapsed: #5b6876; --focus: #6da7ec;
+      --series-1: #3987e5; --st-todo: #256abf; --st-progress: #5598e7; --st-done: #9ec5f4;
+      --epic-1: #3987e5; --epic-2: #d95926; --epic-3: #199e70; --epic-4: #c98500;
+      --epic-5: #d55181; --epic-6: #008300; --epic-7: #9085e9; --epic-8: #e66767;
+      --type-story: #199e70; --type-bug: #e66767; --type-task: #3987e5; --type-spike: #9085e9; --type-other: #8592a0;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --wall: #0e1318; --card: #18202a; --raised: #1f2833; --ink: #e7edf3; --ink-2: #b3bfcb;
+    --muted: #8592a0; --line: #2b3642; --hair: #222b35; --elapsed: #5b6876; --focus: #6da7ec;
+    --series-1: #3987e5; --st-todo: #256abf; --st-progress: #5598e7; --st-done: #9ec5f4;
+    --epic-1: #3987e5; --epic-2: #d95926; --epic-3: #199e70; --epic-4: #c98500;
+    --epic-5: #d55181; --epic-6: #008300; --epic-7: #9085e9; --epic-8: #e66767;
+    --type-story: #199e70; --type-bug: #e66767; --type-task: #3987e5; --type-spike: #9085e9; --type-other: #8592a0;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--wall);
+    color: var(--ink);
+    font: 15px/1.5 var(--font-ui);
+    -webkit-font-smoothing: antialiased;
+  }
+  button, input, select { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  [hidden] { display: none !important; }
+  .icon { width: 16px; height: 16px; flex: none; vertical-align: -3px; }
+  .num { font-variant-numeric: tabular-nums; }
+  .muted { color: var(--muted); }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  /* ---------- Controls ---------- */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 12px; border-radius: 8px;
+    border: 1px solid var(--line); background: var(--card);
+    cursor: pointer; white-space: nowrap;
+  }
+  .btn:hover { border-color: var(--ink-2); }
+  .btn.primary { background: var(--ink); color: var(--card); border-color: var(--ink); font-weight: 700; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .select {
+    padding: 7px 30px 7px 10px; border-radius: 8px; border: 1px solid var(--line);
+    background: var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 6l4 4 4-4' fill='none' stroke='%236c7986' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 8px center / 14px;
+    appearance: none; cursor: pointer; max-width: 100%;
+  }
+  .segmented { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; background: var(--card); padding: 2px; }
+  .segmented button { border: 0; background: none; padding: 5px 11px; border-radius: 6px; cursor: pointer; color: var(--ink-2); }
+  .segmented button[aria-pressed="true"] { background: var(--ink); color: var(--card); }
+  .field { display: grid; gap: 6px; }
+  .field > span { font-weight: 700; font-size: 14px; }
+  .field small { color: var(--muted); font-size: 13px; }
+  .input {
+    width: 100%; padding: 9px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--card);
+  }
+
+  /* ---------- Top bar ---------- */
+  .topbar {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; gap: 12px 16px; flex-wrap: wrap;
+    padding: 10px 24px; background: var(--card); border-bottom: 1px solid var(--line);
+  }
+  .brand { font: 700 19px/1 var(--font-display); letter-spacing: -0.01em; margin-right: 8px; }
+  .pickers { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .pickers label { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 14px; }
+  .top-actions { display: flex; gap: 8px; align-items: center; margin-left: auto; flex-wrap: wrap; }
+  .source-tag { font-size: 13px; color: var(--ink-2); padding: 4px 10px; border-radius: 999px; background: var(--raised); border: 1px solid var(--hair); }
+  .source-tag.demo { background: var(--accent); color: #14202b; border-color: transparent; font-weight: 700; }
+  .busy { font-size: 13px; color: var(--muted); }
+
+  main { padding: 0 24px 64px; max-width: 1680px; margin: 0 auto; }
+  .page-note { padding: 64px 0; color: var(--muted); }
+  .banner {
+    margin-top: 20px; padding: 12px 16px; border-radius: 10px; border: 1px solid var(--critical);
+    background: color-mix(in srgb, var(--critical) 8%, var(--card)); display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  }
+  .banner .icon { color: var(--critical); }
+  #sprintView.loading { opacity: .5; transition: opacity .15s; pointer-events: none; }
+
+  /* ---------- Connect ---------- */
+  .connect { max-width: 560px; margin: 56px auto 0; }
+  .connect h1 { font: 700 40px/1.05 var(--font-display); letter-spacing: -0.025em; margin: 0 0 10px; }
+  .connect > p { color: var(--ink-2); margin: 0 0 28px; max-width: 46ch; }
+  .connect form { display: grid; gap: 18px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 24px; }
+  .connect .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+  .notice { padding: 12px 14px; border-radius: 10px; background: var(--raised); border: 1px solid var(--hair); font-size: 14px; color: var(--ink-2); }
+  .notice code { font-size: 13px; background: var(--card); padding: 1px 5px; border-radius: 4px; border: 1px solid var(--hair); }
+  .form-error { color: var(--critical); font-size: 14px; display: flex; gap: 8px; }
+  .cloud-hint { font-size: 13px; color: var(--muted); }
+
+  /* ---------- Hero: sprint goal + sprint track ---------- */
+  .hero { padding: 36px 0 28px; }
+  .sprint-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; color: var(--ink-2); font-size: 15px; }
+  .sprint-name { font: 650 17px/1.2 var(--font-display); color: var(--ink); }
+  .state-pill { font-size: 13px; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); }
+  .state-pill.active { background: var(--ink); color: var(--card); border-color: var(--ink); }
+  .goal {
+    font: 700 clamp(28px, 3.6vw, 48px)/1.06 var(--font-display);
+    letter-spacing: -0.028em; margin: 14px 0 30px; max-width: 26ch; text-wrap: balance;
+  }
+  .goal.empty { color: var(--muted); font-weight: 500; font-size: clamp(22px, 2.4vw, 30px); }
+  .track { display: grid; grid-template-columns: 56px minmax(0, 1fr); column-gap: 14px; max-width: 1180px; }
+  .track-labels { display: grid; row-gap: 14px; align-content: start; }
+  .track-label { font-size: 13px; color: var(--muted); font-weight: 700; }
+  .track-label.time { height: 48px; padding-top: 3px; }
+  .track-label.work { line-height: 22px; }
+  .bars { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); row-gap: 14px; min-width: 0; }
+  .time-row { display: flex; gap: 2px; }
+  .day { flex: 1 1 0; min-width: 0; }
+  .day-cell { height: 26px; border-radius: 4px; background: var(--card); border: 1px solid var(--hair); }
+  .day.week-start { margin-left: 8px; }
+  .day-label { display: block; font-size: 12px; color: var(--muted); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: clip; }
+  .day.today .day-label { color: var(--ink); font-weight: 700; }
+  .work-row { display: flex; gap: 2px; height: 22px; border-radius: 4px; background: var(--card); border: 1px solid var(--hair); padding: 0; overflow: hidden; }
+  .seg { height: 100%; min-width: 0; transition: flex-basis .9s cubic-bezier(.2,.7,.2,1); }
+  .seg.done { background: var(--st-done); }
+  .seg.progress { background: var(--st-progress); }
+  .seg.todo { background: var(--st-todo); }
+  .today-line { position: absolute; top: -26px; bottom: -6px; width: 2px; margin-left: -1px; background: var(--ink); pointer-events: none; transition: left .9s cubic-bezier(.2,.7,.2,1); }
+  .today-tag {
+    position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+    background: var(--accent); color: #14202b; font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 4px; white-space: nowrap;
+  }
+  .track-legend { display: flex; flex-wrap: wrap; gap: 6px 22px; margin-top: 12px; font-size: 14px; color: var(--ink-2); }
+  .key { display: inline-flex; align-items: center; gap: 7px; }
+  .swatch { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+  .line-key { width: 16px; height: 2px; border-radius: 1px; flex: none; }
+  .key strong { color: var(--ink); font-weight: 700; }
+  .verdict { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 22px; font-size: 16px; color: var(--ink-2); max-width: 80ch; }
+  .status-pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 12px 3px 9px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); font-weight: 700; color: var(--ink); font-size: 14px; }
+  .tone-good { color: var(--good); } .tone-warning { color: var(--warning); } .tone-serious { color: var(--serious); } .tone-critical { color: var(--critical); } .tone-muted { color: var(--muted); }
+
+  /* ---------- Filters ---------- */
+  .filters {
+    position: sticky; top: var(--topbar-h, 57px); z-index: 10;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px;
+    padding: 12px 0; background: var(--wall); border-bottom: 1px solid var(--line);
+  }
+  .search { position: relative; }
+  .search .icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); }
+  .search input { padding-left: 32px; width: 260px; }
+  .people { display: flex; gap: 4px; flex-wrap: wrap; }
+  .avatar {
+    width: 28px; height: 28px; border-radius: 50%; display: inline-grid; place-items: center; flex: none;
+    font-size: 11px; font-weight: 700; letter-spacing: .02em;
+    background: var(--raised); color: var(--ink-2); border: 1px solid var(--line);
+  }
+  .avatar.sm { width: 24px; height: 24px; font-size: 10px; }
+  .avatar.none { border-style: dashed; color: var(--muted); }
+  button.avatar { cursor: pointer; padding: 0; }
+  button.avatar[aria-pressed="true"] { background: var(--ink); color: var(--card); border-color: var(--ink); }
+  .check { display: inline-flex; align-items: center; gap: 7px; font-size: 14px; cursor: pointer; }
+  .check input { width: 16px; height: 16px; accent-color: var(--ink); }
+  .result-count { font-size: 14px; color: var(--muted); margin-left: auto; }
+  .linklike { border: 0; background: none; padding: 0; color: var(--focus); text-decoration: underline; cursor: pointer; font-size: 14px; }
+
+  /* ---------- Insights ---------- */
+  .insights { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 4fr) minmax(0, 3.4fr); gap: 16px; margin-top: 20px; }
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px 16px; min-width: 0; }
+  .panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .panel h2 { font: 650 18px/1.2 var(--font-display); margin: 0; letter-spacing: -0.01em; }
+  .panel .sub { font-size: 13px; color: var(--muted); margin: 3px 0 0; }
+  .legend { display: flex; gap: 6px 16px; flex-wrap: wrap; font-size: 13px; color: var(--ink-2); margin: 12px 0 4px; }
+  .chart { position: relative; width: 100%; }
+  .chart svg { display: block; width: 100%; overflow: visible; }
+  .chart svg:focus-visible { outline-offset: 4px; }
+  .axis-text { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .end-label { fill: var(--ink-2); font-size: 12px; font-weight: 700; }
+  details.data-table { margin-top: 6px; font-size: 13px; }
+  details.data-table summary { cursor: pointer; color: var(--muted); }
+  .mini-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-variant-numeric: tabular-nums; }
+  .mini-table th, .mini-table td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--hair); }
+  .mini-table th { color: var(--muted); font-weight: 700; }
+  .mini-table td.r, .mini-table th.r { text-align: right; }
+
+  .load-rows { display: grid; gap: 2px; margin-top: 8px; }
+  .load-row {
+    display: grid; grid-template-columns: minmax(84px, 128px) 1fr; align-items: center; gap: 10px;
+    padding: 5px 6px; margin: 0 -6px; border: 0; background: none; text-align: left; border-radius: 8px; cursor: pointer; width: calc(100% + 12px);
+  }
+  .load-row:hover, .load-row[aria-pressed="true"] { background: var(--raised); }
+  .load-name { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .load-bar { padding-right: 64px; min-width: 0; }
+  .load-scale { position: relative; height: 14px; }
+  .load-track { display: flex; gap: 2px; height: 14px; min-width: 2px; }
+  .load-track .seg:last-child { border-radius: 0 4px 4px 0; }
+  .load-value { position: absolute; top: 50%; transform: translateY(-50%); margin-left: 8px; font-size: 13px; color: var(--ink-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+  .attention-list { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 2px; max-height: 330px; overflow: auto; }
+  .attention-item {
+    width: 100%; display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; text-align: left;
+    padding: 8px; border: 0; background: none; border-radius: 8px; cursor: pointer;
+  }
+  .attention-item:hover { background: var(--raised); }
+  .attention-item .what { min-width: 0; }
+  .attention-item .summary-line { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+  .attention-item .issue-key { font-size: 12px; }
+  .reasons { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 13px; color: var(--ink-2); margin-top: 2px; }
+  .reason { display: inline-flex; align-items: center; gap: 5px; }
+  .empty-note { color: var(--muted); font-size: 14px; padding: 16px 0 6px; }
+
+  /* ---------- Board ---------- */
+  .board-section { margin-top: 28px; }
+  .section-head { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; margin-bottom: 12px; }
+  .section-head h2 { font: 700 26px/1.1 var(--font-display); margin: 0 auto 0 0; letter-spacing: -0.02em; }
+  .board-scroll { overflow-x: auto; padding-bottom: 8px; }
+  .board { min-width: calc(var(--cols) * 240px); }
+  .cols { display: grid; grid-template-columns: repeat(var(--cols), minmax(240px, 1fr)); gap: 12px; }
+  .col-head {
+    display: flex; align-items: baseline; gap: 8px; padding: 10px 4px 8px;
+    border-top: 3px solid var(--line);
+  }
+  .col-head.cat-todo { border-top-color: var(--st-todo); }
+  .col-head.cat-progress { border-top-color: var(--st-progress); }
+  .col-head.cat-done { border-top-color: var(--st-done); }
+  .col-name { font-weight: 700; }
+  .col-stats { font-size: 13px; color: var(--muted); margin-left: auto; font-variant-numeric: tabular-nums; }
+  .lane { margin-top: 10px; }
+  .lane-head {
+    display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 4px; border: 0; background: none; cursor: pointer;
+    border-bottom: 1px solid var(--line); text-align: left;
+  }
+  .lane-head .chev { transition: transform .15s; color: var(--muted); }
+  .lane-head[aria-expanded="false"] .chev { transform: rotate(-90deg); }
+  .lane-title { font-weight: 700; }
+  .lane-stats { font-size: 13px; color: var(--muted); }
+  .cell { display: grid; gap: 8px; align-content: start; padding: 10px 0; min-height: 60px; }
+  .cell-empty { border: 1px dashed var(--line); border-radius: 10px; height: 48px; }
+
+  .card {
+    display: grid; gap: 8px; text-align: left; width: 100%;
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px 10px;
+    cursor: pointer; position: relative;
+  }
+  .card:hover { border-color: var(--ink-2); }
+  .card.blocked { border-left: 4px solid var(--critical); padding-left: 9px; }
+  .card.is-done .card-summary { color: var(--ink-2); }
+  .card-top { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--muted); }
+  .card-top .prio { margin-left: auto; }
+  .card-summary { font-size: 15px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .blocked-label { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 700; color: var(--ink); }
+  .blocked-label .icon { color: var(--critical); }
+  .epic-tag { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-2); min-width: 0; }
+  .epic-tag span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .card-foot { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
+  .card-foot .est { margin-left: auto; }
+  .est {
+    min-width: 26px; height: 22px; padding: 0 7px; border-radius: 999px; display: inline-grid; place-items: center;
+    background: var(--raised); border: 1px solid var(--hair); color: var(--ink); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums;
+  }
+  .est.none { color: var(--muted); font-weight: 400; }
+  .meta-bit { display: inline-flex; align-items: center; gap: 4px; }
+
+  /* List view */
+  .table-wrap { overflow-x: auto; background: var(--card); border: 1px solid var(--line); border-radius: 14px; }
+  table.issues { width: 100%; border-collapse: collapse; font-size: 14px; }
+  table.issues th, table.issues td { padding: 9px 12px; border-bottom: 1px solid var(--hair); text-align: left; vertical-align: middle; }
+  table.issues th { position: sticky; top: 0; background: var(--raised); font-size: 13px; color: var(--ink-2); white-space: nowrap; }
+  table.issues th button { border: 0; background: none; padding: 0; cursor: pointer; font-weight: 700; display: inline-flex; gap: 4px; align-items: center; }
+  table.issues tbody tr { cursor: pointer; }
+  table.issues tbody tr:hover { background: var(--raised); }
+  table.issues td.summary { min-width: 260px; }
+  table.issues td.r, table.issues th.r { text-align: right; }
+  .status-chip { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+
+  /* ---------- Drawer ---------- */
+  .scrim { position: fixed; inset: 0; background: rgba(10, 16, 22, .35); z-index: 40; }
+  .drawer {
+    position: fixed; top: 0; right: 0; bottom: 0; width: min(520px, 100vw); z-index: 41;
+    background: var(--card); border-left: 1px solid var(--line); overflow-y: auto;
+    padding: 20px 24px 40px; transform: translateX(0); transition: transform .2s ease-out;
+  }
+  .drawer.closed { transform: translateX(100%); }
+  .drawer-top { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; }
+  .drawer-top .btn { margin-left: auto; }
+  .drawer h2 { font: 650 24px/1.2 var(--font-display); letter-spacing: -0.015em; margin: 12px 0 14px; }
+  .drawer-status { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 18px; }
+  .facts { display: grid; grid-template-columns: 120px 1fr; gap: 8px 14px; margin: 0 0 22px; font-size: 14px; }
+  .facts dt { color: var(--muted); }
+  .facts dd { margin: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+  .chip { font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--raised); border: 1px solid var(--hair); }
+  .drawer h3 { font: 650 16px/1.2 var(--font-display); margin: 22px 0 8px; }
+  .description { white-space: pre-wrap; font-size: 15px; line-height: 1.6; color: var(--ink-2); margin: 0; max-width: 62ch; }
+  .subtasks { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; font-size: 14px; }
+  .subtasks li { display: flex; gap: 8px; align-items: center; }
+  .subtasks li.done span:last-child { color: var(--muted); text-decoration: line-through; }
+
+  /* ---------- Tooltip ---------- */
+  .tooltip {
+    position: fixed; z-index: 60; pointer-events: none; min-width: 150px; max-width: 280px;
+    background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 8px;
+    padding: 8px 10px; font-size: 13px; box-shadow: 0 6px 20px rgba(10, 16, 22, .14);
+  }
+  .tooltip .tt-head { color: var(--muted); margin-bottom: 4px; }
+  .tooltip .tt-row { display: flex; align-items: center; gap: 8px; }
+  .tooltip .tt-row strong { font-variant-numeric: tabular-nums; }
+  .tooltip .tt-row span:last-child { color: var(--ink-2); }
+
+  @media (max-width: 1180px) {
+    .insights { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .insights .panel.attention { grid-column: 1 / -1; }
+  }
+  @media (max-width: 760px) {
+    .topbar { padding: 10px 16px; position: static; }
+    main { padding: 0 16px 48px; }
+    .insights { grid-template-columns: minmax(0, 1fr); }
+    .track { grid-template-columns: minmax(0, 1fr); }
+    .track-labels { display: none; }
+    .track-label { display: none; }
+    .day-label { visibility: hidden; }
+    .day:first-child .day-label, .day:last-child .day-label, .day.today .day-label { visibility: visible; overflow: visible; }
+    .day:last-child .day-label { text-align: right; direction: rtl; }
+    .search input { width: 100%; }
+    .search { flex: 1 1 100%; }
+    .result-count { margin-left: 0; }
+    .filters { position: static; }
+    .facts { grid-template-columns: 1fr; gap: 2px; }
+    .facts dd { margin-bottom: 8px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+<header class="topbar" id="topbar">
+  <span class="brand">Sprint board</span>
+  <div class="pickers" id="pickers" hidden>
+    <label>Board <select class="select" id="boardSelect"></select></label>
+    <label>Sprint <select class="select" id="sprintSelect"></select></label>
+  </div>
+  <div class="top-actions">
+    <span class="busy" id="busy" role="status" aria-live="polite"></span>
+    <div class="segmented" id="metricToggle" role="group" aria-label="Measure work in" hidden>
+      <button type="button" data-metric="points" aria-pressed="true">Points</button>
+      <button type="button" data-metric="issues" aria-pressed="false">Issues</button>
+    </div>
+    <span class="source-tag" id="sourceTag" hidden></span>
+    <button class="btn" type="button" id="refreshBtn" hidden></button>
+    <button class="btn" type="button" id="connectionBtn" hidden>Connection</button>
+  </div>
+</header>
+
+<main>
+  <section class="connect" id="connect" hidden>
+    <h1>Connect to Jira</h1>
+    <p>See a sprint's goal, progress, team load and blockers on one page. The board only reads from Jira and never changes anything.</p>
+    <form id="connectForm" novalidate>
+      <div class="notice" id="fileNotice" hidden>
+        To connect to Jira, start the local server in this folder with <code>python3 server.py</code>, then open
+        <code>http://localhost:8787</code>. Demo data works without it.
+      </div>
+      <label class="field"><span>Jira URL</span>
+        <input class="input" id="fUrl" type="url" placeholder="https://jira.yourcompany.com" autocomplete="url" required>
+      </label>
+      <label class="field"><span>Personal access token</span>
+        <input class="input" id="fToken" type="password" autocomplete="off" required>
+        <small>Kept in this browser tab only and sent to Jira through the local server. Closing the tab forgets it.</small>
+      </label>
+      <label class="field"><span>Project key or ID</span>
+        <input class="input" id="fProject" type="text" placeholder="PAY" autocapitalize="characters" spellcheck="false" required>
+      </label>
+      <details>
+        <summary class="cloud-hint">Using Jira Cloud?</summary>
+        <label class="field" style="margin-top:10px"><span>Atlassian account email</span>
+          <input class="input" id="fEmail" type="email" placeholder="you@company.com" autocomplete="email">
+          <small>Jira Cloud signs in with your email plus an API token (paste it in the token field above). Leave this empty for Jira Server or Data Center.</small>
+        </label>
+      </details>
+      <div class="form-error" id="formError" role="alert" hidden></div>
+      <div class="actions">
+        <button class="btn primary" type="submit" id="connectBtn">Connect</button>
+        <button class="btn" type="button" id="demoBtn">Use demo data</button>
+      </div>
+    </form>
+  </section>
+
+  <p class="page-note" id="pageNote" hidden></p>
+
+  <div id="sprintView" hidden>
+    <div id="banner"></div>
+    <section class="hero" id="hero" aria-label="Sprint summary"></section>
+    <section class="filters" id="filters" aria-label="Filters"></section>
+    <section class="insights">
+      <div class="panel" id="burndownPanel"></div>
+      <div class="panel" id="workloadPanel"></div>
+      <div class="panel attention" id="attentionPanel"></div>
+    </section>
+    <section class="board-section" id="boardSection"></section>
+  </div>
+</main>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer closed" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitle" hidden></aside>
+<div class="tooltip" id="tooltip" role="tooltip" hidden></div>
+
+<script>
+(() => {
+  'use strict';
+
+  // ======================================================================
+  // DOM helpers. Everything from Jira is inserted as text, never as HTML.
+  // ======================================================================
+  const SVGNS = 'http://www.w3.org/2000/svg';
+  const $ = (id) => document.getElementById(id);
+
+  function append(el, kids) {
+    for (const k of kids.flat(Infinity)) {
+      if (k == null || k === false) continue;
+      el.append(k instanceof Node ? k : String(k));
+    }
+  }
+  function h(tag, props, ...kids) {
+    const el = document.createElement(tag);
+    for (const [k, v] of Object.entries(props || {})) {
+      if (v == null || v === false) continue;
+      if (k === 'class') el.className = v;
+      else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+      else if (k === 'dataset') Object.assign(el.dataset, v);
+      else if (typeof v === 'boolean' || (k in el && typeof v !== 'string')) el[k] = v;
+      else el.setAttribute(k, v);
+    }
+    append(el, kids);
+    return el;
+  }
+  // Like el.replaceChildren(), but skips null/false and flattens arrays.
+  function fill(el, ...kids) {
+    el.replaceChildren();
+    append(el, kids);
+    return el;
+  }
+  function s(tag, attrs, ...kids) {
+    const el = document.createElementNS(SVGNS, tag);
+    for (const [k, v] of Object.entries(attrs || {})) if (v != null) el.setAttribute(k, v);
+    append(el, kids);
+    return el;
+  }
+
+  const ICONS = {
+    story: [['path', { d: 'M4 1.5h8a.6.6 0 0 1 .6.6v12.3L8 11.4l-4.6 3V2.1a.6.6 0 0 1 .6-.6z', fill: 'currentColor' }]],
+    bug: [['rect', { x: 1.5, y: 1.5, width: 13, height: 13, rx: 3, fill: 'currentColor' }], ['circle', { cx: 8, cy: 8, r: 2.8, fill: 'var(--card)' }]],
+    task: [['rect', { x: 1.5, y: 1.5, width: 13, height: 13, rx: 3, fill: 'currentColor' }], ['path', { d: 'M4.6 8.3l2.2 2.2 4.6-4.9', fill: 'none', stroke: 'var(--card)', 'stroke-width': 1.8, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }]],
+    spike: [['path', { d: 'M9.6 1 3 9.1h4.3L6.4 15 13 6.9H8.7z', fill: 'currentColor' }]],
+    other: [['circle', { cx: 8, cy: 8, r: 6, fill: 'currentColor' }]],
+    flag: [['path', { d: 'M3.5 14.5V2M3.5 2.5h8.6l-2.3 3.2 2.3 3.3H3.5', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.7, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }]],
+    p5: [['path', { d: 'M3.5 8l4.5-4 4.5 4M3.5 12.5l4.5-4 4.5 4', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.9, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }]],
+    p4: [['path', { d: 'M3.5 10.5l4.5-4.5 4.5 4.5', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.9, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }]],
+    p3: [['path', { d: 'M3.5 6.2h9M3.5 9.8h9', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.9, 'stroke-linecap': 'round' }]],
+    p2: [['path', { d: 'M3.5 5.5l4.5 4.5 4.5-4.5', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.9, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }]],
+    p1: [['path', { d: 'M3.5 3.5l4.5 4 4.5-4M3.5 8l4.5 4 4.5-4', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.9, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }]],
+    check: [['circle', { cx: 8, cy: 8, r: 7, fill: 'currentColor' }], ['path', { d: 'M4.8 8.2l2.1 2.1 4.3-4.5', fill: 'none', stroke: '#fff', 'stroke-width': 1.8, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }]],
+    alert: [['path', { d: 'M8 1.3l7 12.6H1z', fill: 'currentColor', 'stroke-linejoin': 'round' }], ['path', { d: 'M8 6v3.6', stroke: '#14202b', 'stroke-width': 1.7, 'stroke-linecap': 'round' }], ['circle', { cx: 8, cy: 11.8, r: 1, fill: '#14202b' }]],
+    stop: [['circle', { cx: 8, cy: 8, r: 7, fill: 'currentColor' }], ['path', { d: 'M5.5 5.5l5 5M10.5 5.5l-5 5', stroke: '#fff', 'stroke-width': 1.8, 'stroke-linecap': 'round' }]],
+    up: [['circle', { cx: 8, cy: 8, r: 7, fill: 'currentColor' }], ['path', { d: 'M5 9.5l3-3 3 3', fill: 'none', stroke: '#fff', 'stroke-width': 1.8, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }]],
+    clock: [['circle', { cx: 8, cy: 8, r: 6.2, fill: 'none', stroke: 'currentColor', 'stroke-width': 1.6 }], ['path', { d: 'M8 4.5V8l2.4 1.6', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.6, 'stroke-linecap': 'round' }]],
+    user: [['circle', { cx: 8, cy: 5.3, r: 2.8, fill: 'none', stroke: 'currentColor', 'stroke-width': 1.6 }], ['path', { d: 'M2.8 14.2c.6-2.7 2.7-4.2 5.2-4.2s4.6 1.5 5.2 4.2', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.6, 'stroke-linecap': 'round' }]],
+    ruler: [['rect', { x: 1.5, y: 5, width: 13, height: 6, rx: 1.2, fill: 'none', stroke: 'currentColor', 'stroke-width': 1.6 }], ['path', { d: 'M4.5 5v2.4M7.5 5v3.2M10.5 5v2.4', stroke: 'currentColor', 'stroke-width': 1.4 }]],
+    plus: [['path', { d: 'M8 3v10M3 8h10', stroke: 'currentColor', 'stroke-width': 1.8, 'stroke-linecap': 'round' }]],
+    search: [['circle', { cx: 7, cy: 7, r: 4.6, fill: 'none', stroke: 'currentColor', 'stroke-width': 1.6 }], ['path', { d: 'M10.5 10.5L14 14', stroke: 'currentColor', 'stroke-width': 1.7, 'stroke-linecap': 'round' }]],
+    refresh: [['path', { d: 'M13.2 6.5A5.4 5.4 0 1 0 13.3 10M13.5 2.5v4h-4', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.6, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }]],
+    close: [['path', { d: 'M4 4l8 8M12 4l-8 8', stroke: 'currentColor', 'stroke-width': 1.8, 'stroke-linecap': 'round' }]],
+    external: [['path', { d: 'M9.5 2.5h4v4M13.3 2.7L7.5 8.5M12 9.5v3.2a.8.8 0 0 1-.8.8H3.3a.8.8 0 0 1-.8-.8V4.8a.8.8 0 0 1 .8-.8h3.2', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.6, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }]],
+    chevron: [['path', { d: 'M4 6l4 4 4-4', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.8, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }]],
+    sort: [['path', { d: 'M5 6.5l3-3 3 3M5 9.5l3 3 3-3', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }]],
+    subtask: [['path', { d: 'M3 2.5v6.5a2 2 0 0 0 2 2h8M10 8l3 3-3 3', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.6, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }]],
+  };
+  function icon(name, cls) {
+    const svg = s('svg', { viewBox: '0 0 16 16', class: 'icon' + (cls ? ' ' + cls : ''), 'aria-hidden': 'true', focusable: 'false' });
+    for (const [tag, attrs] of ICONS[name] || ICONS.other) svg.append(s(tag, attrs));
+    return svg;
+  }
+
+  // ======================================================================
+  // Small utilities
+  // ======================================================================
+  const DAY_MS = 86400000;
+  const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+  const isWeekend = (d) => d.getDay() === 0 || d.getDay() === 6;
+  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+  const fmtDay = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' });
+  const fmtWeekday = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
+  const fmtFull = new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  const fmtDateTime = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+  const fmtNum = (v) => (Number.isInteger(v) ? String(v) : (Math.round(v * 10) / 10).toFixed(1));
+  const plural = (n, one, many) => `${fmtNum(n)} ${n === 1 ? one : many}`;
+  const initials = (name) => (name || '?').split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('');
+  function parseDate(v) {
+    if (!v) return null;
+    const d = new Date(String(v).replace(/([+-]\d{2})(\d{2})$/, '$1:$2')); // Jira sends +0000, Safari wants +00:00
+    return isNaN(d) ? null : d;
+  }
+  const store = {
+    get(area, key, fallback) {
+      try { const v = window[area].getItem(key); return v == null ? fallback : JSON.parse(v); } catch (e) { return fallback; }
+    },
+    set(area, key, value) {
+      try { window[area].setItem(key, JSON.stringify(value)); } catch (e) { /* storage unavailable */ }
+    },
+    remove(area, key) { try { window[area].removeItem(key); } catch (e) { /* ignore */ } },
+  };
+
+  // ======================================================================
+  // Sprint time: working days (Mon-Fri) between sprint start and end
+  // ======================================================================
+  function workingDays(start, end) {
+    const days = [];
+    const first = startOfDay(start);
+    for (let d = first; d < end; d = addDays(d, 1)) {
+      if (isWeekend(d)) continue;
+      // The last day counts only when more than half of it falls inside the sprint
+      // (a sprint ending Monday 09:00 doesn't own that Monday).
+      if (d.getTime() !== first.getTime() && d.getTime() + DAY_MS / 2 > end.getTime()) continue;
+      days.push(d);
+    }
+    return days;
+  }
+  function elapsedWorkingDays(days, now) {
+    let total = 0;
+    for (const d of days) {
+      const end = addDays(d, 1);
+      if (now >= end) total += 1;
+      else if (now > d) total += (now - d) / (end - d);
+    }
+    return total;
+  }
+  function sprintClock(sprint) {
+    if (sprint.state === 'closed') return sprint.completeDate || sprint.end;
+    if (sprint.state === 'future') return sprint.start;
+    return new Date();
+  }
+
+  // ======================================================================
+  // Demo data: a payments team two weeks into "Sprint 42", dated around today
+  // ======================================================================
+  function buildDemo() {
+    const people = ['Priya Natarajan', 'Marcus Lee', 'Sofia Alvarez', 'Tomasz Nowak', 'Aisha Bello', 'Jordan Kim']
+      .map((name, i) => ({ id: 'u' + i, name }));
+    const epics = [
+      { key: 'PAY-100', name: 'Checkout redesign' },
+      { key: 'PAY-120', name: 'Fraud rules engine' },
+      { key: 'PAY-140', name: 'Payouts API v2' },
+      { key: 'PAY-160', name: 'Observability' },
+    ];
+    const statuses = {
+      'To Do': { id: '1', category: 'todo' },
+      'In Progress': { id: '3', category: 'progress' },
+      'In Review': { id: '10001', category: 'progress' },
+      'QA': { id: '10002', category: 'progress' },
+      'Done': { id: '10003', category: 'done' },
+    };
+    const columns = Object.entries(statuses).map(([name, st]) => ({ name, statusIds: [st.id] }));
+    const types = { S: 'Story', B: 'Bug', T: 'Task', K: 'Spike' };
+    const prios = { 5: 'Highest', 4: 'High', 3: 'Medium', 2: 'Low', 1: 'Lowest' };
+
+    // Active sprint: starts on a Monday 5-11 days ago, runs two weeks.
+    const today = new Date();
+    const sprintStart = (() => {
+      const d = addDays(startOfDay(today), -5);
+      const back = (d.getDay() + 6) % 7; // days since Monday
+      const monday = addDays(d, -back);
+      return new Date(monday.getFullYear(), monday.getMonth(), monday.getDate(), 9);
+    })();
+    const at = (base, dayOffset, hour) => new Date(base.getFullYear(), base.getMonth(), base.getDate() + dayOffset, hour);
+    const ago = (days, hour = 10) => at(startOfDay(today), -days, hour);
+
+    // [num, type, summary, epic, person, points, status, priority, extra]
+    const active = [
+      [201, 'S', 'Single-page checkout layout behind a feature flag', 0, 0, 8, 'Done', 4, { done: 3, subtasks: [4, 4], labels: ['frontend'],
+        desc: 'Collapse shipping, payment and review into one page.\n\nAcceptance:\n- Flag checkout.single_page controls the new layout\n- Old flow untouched when the flag is off\n- Lighthouse performance score stays above 90' }],
+      [202, 'S', 'Saved card selector for returning customers', 0, 2, 5, 'Done', 3, { done: 4, labels: ['frontend'] }],
+      [203, 'B', 'Tax line rounds to three decimals for JPY', 0, 1, 2, 'Done', 5, { done: 1, labels: ['i18n'],
+        desc: 'JPY has no minor units, but the tax line shows ¥1,204.000.\nUse the currency exponent from the pricing service instead of a fixed 2.' }],
+      [204, 'T', 'Add p95 latency SLO alerts for /payouts', 3, 5, 3, 'Done', 3, { done: 2 }],
+      [205, 'S', 'Velocity rule: block more than 5 cards per device per hour', 1, 3, 5, 'Done', 4, { done: 4, subtasks: [3, 3] }],
+      [206, 'T', 'Move fraud score consumers to the v2 topic', 1, 4, 3, 'Done', 3, { done: 4 }],
+      [207, 'B', 'Payout webhooks retried without backoff', 2, 1, 3, 'Done', 4, { done: 2, labels: ['incident-follow-up'] }],
+      [208, 'S', 'Address autocomplete in the shipping step', 0, 2, 5, 'QA', 3, { since: 1, labels: ['frontend'] }],
+      [209, 'S', 'Payout batch status endpoint', 2, 5, 5, 'QA', 3, { since: 2 }],
+      [210, 'S', 'Rule simulator: replay the last 30 days of orders', 1, 3, 8, 'In Review', 4, { since: 2, subtasks: [3, 4],
+        desc: 'Ops wants to see how many orders a new rule would have blocked before switching it on.\nRun rules against a 30-day sample in the analytics replica, never production.' }],
+      [211, 'T', 'Dashboard for checkout funnel drop-off', 3, 5, 2, 'In Review', 2, { since: 1 }],
+      [212, 'B', '3DS challenge iframe cut off on Safari iOS 18', 0, 0, 3, 'In Review', 5, { since: 1, added: true, labels: ['frontend', 'safari'],
+        desc: 'Reported by support after the flag went to staff. The challenge iframe has a fixed 400px height; iOS 18 Safari adds a toolbar that hides the submit button.' }],
+      [213, 'S', 'Apple Pay and Google Pay buttons on the review step', 0, 0, 5, 'In Progress', 4, { since: 6, subtasks: [2, 5], labels: ['frontend'] }],
+      [214, 'S', 'Payouts v2: idempotency keys on create', 2, 1, 5, 'In Progress', 4, { since: 3, flagged: true,
+        desc: 'Blocked: waiting on sandbox credentials from the partner bank (ticket BANK-8812). Code is ready behind the payouts_v2 flag.' }],
+      [215, 'K', 'Evaluate a rules DSL against JSON Logic', 1, 4, 3, 'In Progress', 3, { since: 2 }],
+      [216, 'T', 'Rollout plan for 10% of traffic', 0, 2, 2, 'In Progress', 4, { since: 1 }],
+      [217, 'B', 'Duplicate payout emails when a batch retries', 2, -1, 2, 'To Do', 3, { added: true }],
+      [218, 'S', 'Retire the legacy fraud score endpoint', 1, 3, 5, 'To Do', 5, {}],
+      [219, 'T', 'Runbook for rolling back checkout', 3, 4, null, 'To Do', 3, {}],
+      [220, 'S', 'Payout reconciliation report as CSV export', 2, 1, 3, 'To Do', 2, {}],
+      [221, 'S', 'Promo code field on the single-page checkout', 0, -1, 3, 'To Do', 3, { added: true, labels: ['frontend'] }],
+      [222, 'T', 'Load test checkout at 3x peak traffic', 3, 5, 3, 'To Do', 4, {}],
+      [223, 'B', 'Currency selector loses its value on back navigation', 0, 2, 1, 'To Do', 2, {}],
+    ];
+
+    const previous = [
+      [171, 'S', 'Payouts v2 sandbox for three beta merchants', 2, 1, 8, 'Done', 4, { done: 7 }],
+      [172, 'S', 'Merchant payout schedule settings page', 2, 2, 5, 'Done', 3, { done: 8 }],
+      [173, 'B', 'Payout amount off by one cent on FX conversion', 2, 1, 3, 'Done', 5, { done: 2 }],
+      [174, 'T', 'Structured logging for the payouts service', 3, 5, 3, 'Done', 3, { done: 3 }],
+      [175, 'S', 'Device fingerprint collection on checkout', 1, 3, 5, 'Done', 3, { done: 9 }],
+      [176, 'T', 'Fraud rules schema and migrations', 1, 4, 3, 'Done', 3, { done: 1 }],
+      [177, 'B', 'Order confirmation email shows wrong currency', 0, 0, 2, 'Done', 4, { done: 0 }],
+      [178, 'S', 'Checkout progress indicator', 0, 2, 3, 'Done', 2, { done: 4 }],
+      [179, 'T', 'Error budget dashboard for checkout', 3, 5, 2, 'Done', 2, { done: 9 }],
+      [180, 'S', 'Webhook signature verification for payouts', 2, 4, 5, 'Done', 4, { done: 8 }],
+      [181, 'K', 'Spike: card vault provider comparison', 0, 0, 3, 'Done', 3, { done: 4 }],
+      [182, 'S', 'Bulk payout CSV upload', 2, 1, 5, 'In Progress', 3, {}],
+      [183, 'B', 'Fraud review queue times out above 500 items', 1, 3, 3, 'To Do', 4, {}],
+    ];
+
+    const upcoming = [
+      [230, 'S', 'Single-page checkout to 50% of traffic', 0, 2, 3, 'To Do', 4, {}],
+      [231, 'S', 'Rules editor for the fraud operations team', 1, 3, 8, 'To Do', 4, {}],
+      [232, 'S', 'Payout batch retries with exponential backoff', 2, 1, 5, 'To Do', 3, {}],
+      [233, 'T', 'Remove the legacy checkout code path', 0, 0, 5, 'To Do', 3, {}],
+      [234, 'B', 'Address autocomplete misses unit numbers', 0, -1, 2, 'To Do', 3, {}],
+      [235, 'S', 'Per-merchant fraud thresholds', 1, 4, 5, 'To Do', 3, {}],
+      [236, 'T', 'Trace sampling for payouts', 3, 5, 2, 'To Do', 2, {}],
+      [237, 'S', 'Payout statements PDF', 2, -1, null, 'To Do', 2, {}],
+    ];
+
+    const describe = (type, summary) => ({
+      Story: `${summary}.\n\nDone when it's behind a flag, tested in staging, and the release notes are updated.`,
+      Bug: `${summary}.\n\nSteps to reproduce and the affected merchants are in the linked support ticket.`,
+      Task: `${summary}.`,
+      Spike: `${summary}.\n\nTimebox: 3 days. Write up a recommendation in the team's decision log.`,
+    }[type]);
+
+    function makeIssues(rows, sprintStartDate) {
+      return rows.map(([num, t, summary, epicIdx, personIdx, points, statusName, prio, x]) => {
+        const st = statuses[statusName];
+        const type = types[t];
+        const created = at(sprintStartDate, -9 - (num % 7), 11);
+        const resolved = x.done != null ? at(sprintStartDate, x.done, 15) : null;
+        const since = x.since != null ? ago(x.since) : null;
+        const [doneSubs, totalSubs] = x.subtasks || [0, 0];
+        return {
+          key: 'PAY-' + num,
+          summary,
+          type,
+          typeKind: typeKind(type),
+          priority: prios[prio],
+          priorityRank: prio,
+          status: statusName,
+          statusId: st.id,
+          category: st.category,
+          assignee: personIdx >= 0 ? people[personIdx] : null,
+          reporter: people[(num + 2) % people.length],
+          estimate: points,
+          labels: x.labels || [],
+          components: [epicIdx === 3 ? 'Platform' : epicIdx === 1 ? 'Risk' : 'Payments'],
+          epic: epics[epicIdx],
+          flagged: !!x.flagged,
+          added: !!x.added,
+          created,
+          updated: resolved || since || ago(1, 16),
+          resolved,
+          statusChanged: resolved || since,
+          description: x.desc || describe(type, summary),
+          subtasks: Array.from({ length: totalSubs }, (_, i) => ({
+            key: `PAY-${num}-${i + 1}`,
+            summary: ['Implement', 'Unit tests', 'Accessibility check', 'Analytics events', 'Docs'][i % 5],
+            done: i < doneSubs,
+          })),
+          url: null,
+        };
+      });
+    }
+
+    const sprints = [
+      { id: 41, name: 'Sprint 41', state: 'closed', goal: 'Launch payouts v2 to three beta merchants',
+        start: at(sprintStart, -14, 9), end: at(sprintStart, 0, 9), completeDate: at(sprintStart, -3, 16) },
+      { id: 42, name: 'Sprint 42', state: 'active', goal: 'Ship one-page checkout to 10% of traffic and retire the legacy fraud score',
+        start: sprintStart, end: at(sprintStart, 14, 9), completeDate: null },
+      { id: 43, name: 'Sprint 43', state: 'future', goal: 'Open fraud rules to the operations team',
+        start: at(sprintStart, 14, 9), end: at(sprintStart, 28, 9), completeDate: null },
+    ];
+    // Closed sprint "ends" the Friday before the next one starts.
+    sprints[0].completeDate = at(sprintStart, -3, 17);
+    sprints[0].end = at(sprintStart, -3, 17);
+
+    const issuesBySprint = {
+      41: makeIssues(previous, sprints[0].start),
+      42: makeIssues(active, sprints[1].start),
+      43: makeIssues(upcoming, sprints[2].start),
+    };
+
+    return {
+      kind: 'demo',
+      label: 'Demo data',
+      async listBoards() { return [{ id: 7, name: 'Payments team board' }]; },
+      async boardConfig() { return { columns, estimate: { fieldId: 'customfield_10016', unit: 'pts' } }; },
+      async listSprints() { return sprints.map((sp) => ({ ...sp })); },
+      async loadSprint(boardId, sprintId) {
+        await new Promise((r) => setTimeout(r, 120));
+        const issues = issuesBySprint[sprintId] || [];
+        return {
+          issues,
+          addedKeys: new Set(issues.filter((i) => i.added).map((i) => i.key)),
+          removedCount: sprintId === 42 ? 1 : 0,
+        };
+      },
+    };
+  }
+
+  // ======================================================================
+  // Live data: Jira REST through the local proxy (server.py)
+  // ======================================================================
+  class JiraError extends Error {
+    constructor(status, message) { super(message); this.status = status; }
+  }
+
+  function typeKind(name) {
+    if (/bug|defect|incident/i.test(name)) return 'bug';
+    if (/story|feature/i.test(name)) return 'story';
+    if (/spike|research|investigation/i.test(name)) return 'spike';
+    if (/task|chore|improvement/i.test(name)) return 'task';
+    return 'other';
+  }
+  const PRIORITY_RANKS = { highest: 5, blocker: 5, critical: 5, high: 4, major: 4, medium: 3, normal: 3, low: 2, minor: 2, lowest: 1, trivial: 1 };
+
+  function adfToText(node) {
+    if (!node || typeof node !== 'object') return '';
+    if (node.type === 'text') return node.text || '';
+    if (node.type === 'hardBreak') return '\n';
+    const inner = (node.content || []).map(adfToText).join('');
+    return /^(paragraph|heading|listItem|codeBlock|blockquote)$/.test(node.type) ? inner + '\n' : inner;
+  }
+
+  function base64(text) {
+    return btoa(String.fromCharCode(...new TextEncoder().encode(text)));
+  }
+
+  function liveSource(conn) {
+    const auth = conn.email ? 'Basic ' + base64(conn.email + ':' + conn.token) : 'Bearer ' + conn.token;
+
+    async function get(path, params) {
+      const qs = params ? '?' + new URLSearchParams(params) : '';
+      let res;
+      try {
+        res = await fetch('/jira' + path + qs, { headers: { 'X-Jira-Url': conn.baseUrl, 'X-Jira-Auth': auth } });
+      } catch (e) {
+        throw new JiraError(0, "Can't reach the local server. Is server.py still running?");
+      }
+      let body = null;
+      try { body = await res.json(); } catch (e) { /* not JSON */ }
+      if (res.ok) return body;
+      throw new JiraError(res.status, describeError(res.status, body));
+    }
+
+    function describeError(status, body) {
+      const detail = body && (body.error || (body.errorMessages || []).join(' ') ||
+        Object.values(body.errors || {}).join(' '));
+      if (status === 401) return 'Jira didn\'t accept the token (401). Check that it\'s correct and hasn\'t expired. On Jira Cloud, also enter your email.';
+      if (status === 403) return 'The token works, but it doesn\'t have permission for this (403).' + (detail ? ' ' + detail : '');
+      if (status === 404) return (detail || 'Not found (404).') + ' Check the Jira URL, including any path such as /jira, and the project key.';
+      return detail || `Jira answered with HTTP ${status}.`;
+    }
+
+    async function pages(path, params, pick) {
+      const out = [];
+      let startAt = 0;
+      for (let guard = 0; guard < 200; guard++) {
+        const r = await get(path, { ...params, startAt, maxResults: 50 });
+        const vals = pick(r) || [];
+        out.push(...vals);
+        startAt += vals.length;
+        const done = r.isLast === true || vals.length === 0 || (typeof r.total === 'number' && startAt >= r.total) ||
+          (r.isLast === undefined && typeof r.total !== 'number');
+        if (done) break;
+      }
+      return out;
+    }
+
+    function normalize(raw, estimate) {
+      const f = raw.fields || {};
+      const catKey = f.status && f.status.statusCategory && f.status.statusCategory.key;
+      const category = catKey === 'done' ? 'done' : catKey === 'indeterminate' ? 'progress' : 'todo';
+      let est = estimate.fieldId ? f[estimate.fieldId] : null;
+      if (typeof est === 'number' && estimate.unit === 'h') est = Math.round(est / 360) / 10;
+      if (typeof est !== 'number') est = null;
+      let epic = null;
+      if (f.epic && f.epic.key) epic = { key: f.epic.key, name: f.epic.name || f.epic.summary || f.epic.key };
+      else if (f.parent && f.parent.fields) {
+        const pt = f.parent.fields.issuetype || {};
+        if (pt.hierarchyLevel === 1 || /epic/i.test(pt.name || '')) {
+          epic = { key: f.parent.key, name: f.parent.fields.summary || f.parent.key };
+        }
+      }
+      const type = (f.issuetype && f.issuetype.name) || 'Issue';
+      const priority = (f.priority && f.priority.name) || 'None';
+      const person = (p) => (p ? { id: p.accountId || p.key || p.name || p.displayName, name: p.displayName || p.name || 'Unknown' } : null);
+      return {
+        key: raw.key,
+        summary: f.summary || '(no summary)',
+        type,
+        typeKind: typeKind(type),
+        priority,
+        priorityRank: PRIORITY_RANKS[priority.toLowerCase()] || 3,
+        status: (f.status && f.status.name) || 'Unknown',
+        statusId: f.status ? String(f.status.id) : '',
+        category,
+        assignee: person(f.assignee),
+        reporter: person(f.reporter),
+        estimate: est,
+        labels: f.labels || [],
+        components: (f.components || []).map((c) => c.name),
+        epic,
+        flagged: f.flagged === true,
+        added: false,
+        created: parseDate(f.created),
+        updated: parseDate(f.updated),
+        resolved: parseDate(f.resolutiondate),
+        statusChanged: parseDate(f.statuscategorychangedate),
+        description: typeof f.description === 'string' ? f.description : adfToText(f.description).trim(),
+        subtasks: (f.subtasks || []).map((st) => ({
+          key: st.key,
+          summary: (st.fields && st.fields.summary) || st.key,
+          done: !!(st.fields && st.fields.status && st.fields.status.statusCategory && st.fields.status.statusCategory.key === 'done'),
+        })),
+        url: `${conn.baseUrl}/browse/${encodeURIComponent(raw.key)}`,
+        isSubtask: !!(f.issuetype && f.issuetype.subtask),
+      };
+    }
+
+    return {
+      kind: 'live',
+      label: `${conn.project} on ${new URL(conn.baseUrl).host}`,
+      async listBoards(project) {
+        const boards = await pages('/rest/agile/1.0/board', { projectKeyOrId: project }, (r) => r.values);
+        const scrum = boards.filter((b) => b.type === 'scrum');
+        if (!boards.length) throw new JiraError(404, `No boards found for project ${project}. Check the project key, or that the token can see the project.`);
+        if (!scrum.length) throw new JiraError(400, `Project ${project} only has Kanban boards. Sprints exist on Scrum boards only.`);
+        return scrum.map((b) => ({ id: b.id, name: b.name }));
+      },
+      async boardConfig(boardId) {
+        const c = await get(`/rest/agile/1.0/board/${boardId}/configuration`);
+        const columns = ((c.columnConfig && c.columnConfig.columns) || [])
+          .map((col) => ({ name: col.name, statusIds: (col.statuses || []).map((st) => String(st.id)) }))
+          .filter((col) => col.statusIds.length);
+        const field = c.estimation && c.estimation.type === 'field' && c.estimation.field;
+        const fieldId = field ? field.fieldId : null;
+        return { columns, estimate: { fieldId, unit: !fieldId ? null : /^time(original)?estimate$/.test(fieldId) ? 'h' : 'pts' } };
+      },
+      async listSprints(boardId) {
+        const list = await pages(`/rest/agile/1.0/board/${boardId}/sprint`, { state: 'active,future,closed' }, (r) => r.values);
+        return list.map((sp) => ({
+          id: sp.id, name: sp.name, state: sp.state, goal: sp.goal || '',
+          start: parseDate(sp.startDate), end: parseDate(sp.endDate), completeDate: parseDate(sp.completeDate),
+        }));
+      },
+      async loadSprint(boardId, sprintId, config) {
+        const fields = ['summary', 'status', 'issuetype', 'priority', 'assignee', 'reporter', 'labels', 'components',
+          'created', 'updated', 'resolutiondate', 'statuscategorychangedate', 'description', 'subtasks', 'parent',
+          'epic', 'flagged', config.estimate.fieldId].filter(Boolean).join(',');
+        const [raw, report] = await Promise.all([
+          pages(`/rest/agile/1.0/board/${boardId}/sprint/${sprintId}/issue`, { fields }, (r) => r.issues),
+          // Internal Jira endpoint behind the built-in sprint report; optional.
+          get('/rest/greenhopper/1.0/rapid/charts/sprintreport', { rapidViewId: boardId, sprintId }).catch(() => null),
+        ]);
+        const issues = raw.map((r) => normalize(r, config.estimate)).filter((i) => !i.isSubtask);
+        const contents = report && report.contents;
+        const addedKeys = contents && contents.issueKeysAddedDuringSprint ? new Set(Object.keys(contents.issueKeysAddedDuringSprint)) : null;
+        if (addedKeys) issues.forEach((i) => { i.added = addedKeys.has(i.key); });
+        const removedCount = contents && Array.isArray(contents.puntedIssues) ? contents.puntedIssues.length : null;
+        return { issues, addedKeys, removedCount };
+      },
+    };
+  }
+
+  // ======================================================================
+  // App state
+  // ======================================================================
+  const prefs = Object.assign({ view: 'board', lanes: 'none', metric: 'points' }, store.get('localStorage', 'sprintboard:prefs', {}));
+  const state = {
+    source: null,
+    boards: [], boardId: null,
+    config: null,
+    sprints: [], sprintId: null,
+    data: null,          // { sprint, issues, addedKeys, removedCount }
+    filters: { q: '', people: new Set(), type: '', epic: '', attention: false },
+    collapsedLanes: new Set(),
+    sort: { key: 'rank', dir: 1 },
+    epicColor: new Map(),
+    loadSeq: 0,
+  };
+  const savePrefs = () => store.set('localStorage', 'sprintboard:prefs', prefs);
+
+  const usesEstimates = () => !!(state.config && state.config.estimate && state.config.estimate.unit);
+  const metric = () => (usesEstimates() && prefs.metric === 'points' ? 'points' : 'issues');
+  const unitWord = (v) => (metric() === 'issues' ? (v === 1 ? 'issue' : 'issues') : state.config.estimate.unit === 'h' ? 'h' : 'pts');
+  const fmtVal = (v) => `${fmtNum(v)} ${unitWord(v)}`;
+  const valueOf = (issue) => (metric() === 'issues' ? 1 : issue.estimate || 0);
+  const sumOf = (issues) => issues.reduce((t, i) => t + valueOf(i), 0);
+
+  function epicColor(epic) {
+    if (!epic) return null;
+    if (!state.epicColor.has(epic.key)) {
+      const n = state.epicColor.size;
+      state.epicColor.set(epic.key, n < 8 ? `var(--epic-${n + 1})` : 'var(--muted)');
+    }
+    return state.epicColor.get(epic.key);
+  }
+
+  // ======================================================================
+  // Derived data
+  // ======================================================================
+  function totalsByCategory(issues) {
+    const t = { todo: 0, progress: 0, done: 0, total: 0 };
+    for (const i of issues) { const v = valueOf(i); t[i.category] += v; t.total += v; }
+    return t;
+  }
+  const isBlocked = (i) => i.category !== 'done' && (i.flagged || /block|imped/i.test(i.status) || i.labels.some((l) => /^blocked$/i.test(l)));
+
+  function attentionReasons(issue, sprint, timeFrac, now) {
+    if (issue.category === 'done') return [];
+    const out = [];
+    if (isBlocked(issue)) out.push({ rank: 5, icon: 'flag', tone: 'critical', text: issue.flagged ? 'Flagged as blocked' : `Status is ${issue.status}` });
+    if (issue.category === 'progress' && issue.statusChanged && sprint.state === 'active') {
+      const days = Math.floor((now - issue.statusChanged) / DAY_MS);
+      if (days >= 4) out.push({ rank: 4, icon: 'clock', tone: 'serious', text: `In progress for ${days} days` });
+    }
+    if (issue.category === 'todo' && issue.priorityRank >= 4 && timeFrac >= 0.3) {
+      out.push({ rank: 3, icon: 'alert', tone: 'warning', text: `${issue.priority} priority, not started` });
+    }
+    if (!issue.assignee) out.push({ rank: 2, icon: 'user', tone: 'muted', text: 'Unassigned' });
+    if (usesEstimates() && issue.estimate == null) out.push({ rank: 1, icon: 'ruler', tone: 'muted', text: 'No estimate' });
+    return out;
+  }
+
+  function filteredIssues() {
+    const f = state.filters;
+    const q = f.q.trim().toLowerCase();
+    const sp = state.data.sprint;
+    const now = sprintClock(sp);
+    const days = workingDays(sp.start, sp.end);
+    const timeFrac = days.length ? elapsedWorkingDays(days, now) / days.length : 0;
+    return state.data.issues.filter((i) => {
+      if (q && !(i.key.toLowerCase().includes(q) || i.summary.toLowerCase().includes(q) || i.labels.some((l) => l.toLowerCase().includes(q)))) return false;
+      if (f.people.size && !f.people.has(i.assignee ? i.assignee.id : '__none')) return false;
+      if (f.type && i.type !== f.type) return false;
+      if (f.epic && (i.epic ? i.epic.key : '__none') !== f.epic) return false;
+      if (f.attention && !attentionReasons(i, sp, timeFrac, now).length) return false;
+      return true;
+    });
+  }
+  const filtersActive = () => {
+    const f = state.filters;
+    return !!(f.q.trim() || f.people.size || f.type || f.epic || f.attention);
+  };
+
+  // ======================================================================
+  // Tooltip (shared)
+  // ======================================================================
+  const tooltip = $('tooltip');
+  function showTooltip(x, y, head, rows) {
+    fill(tooltip, 
+      head ? h('div', { class: 'tt-head' }, head) : null,
+      rows.map((r) => h('div', { class: 'tt-row' },
+        r.key || null,
+        h('strong', null, r.value),
+        h('span', null, r.label)))
+    );
+    tooltip.hidden = false;
+    const w = tooltip.offsetWidth, ht = tooltip.offsetHeight;
+    let left = x + 14, top = y + 14;
+    if (left + w > window.innerWidth - 8) left = x - w - 14;
+    if (top + ht > window.innerHeight - 8) top = y - ht - 14;
+    tooltip.style.left = Math.max(8, left) + 'px';
+    tooltip.style.top = Math.max(8, top) + 'px';
+  }
+  const hideTooltip = () => { tooltip.hidden = true; };
+  const lineKey = (color) => h('span', { class: 'line-key', style: `background:${color}` });
+  const swatch = (color) => h('span', { class: 'swatch', style: `background:${color}` });
+
+  // ======================================================================
+  // Rendering: hero (sprint goal + sprint track)
+  // ======================================================================
+  const STATE_ORDER = [
+    { cat: 'done', label: 'Done', color: 'var(--st-done)' },
+    { cat: 'progress', label: 'In progress', color: 'var(--st-progress)' },
+    { cat: 'todo', label: 'To do', color: 'var(--st-todo)' },
+  ];
+  let heroAnimated = false;
+
+  function renderHero() {
+    const { sprint, issues, addedKeys, removedCount } = state.data;
+    const now = sprintClock(sprint);
+    const days = workingDays(sprint.start, sprint.end);
+    const elapsed = elapsedWorkingDays(days, now);
+    const timeFrac = days.length ? clamp(elapsed / days.length, 0, 1) : 0;
+    const t = totalsByCategory(issues);
+    const stateText = { active: 'Active', closed: 'Closed', future: 'Upcoming' }[sprint.state] || sprint.state;
+
+    let when = '';
+    if (sprint.state === 'active') {
+      const left = Math.max(0, Math.ceil(days.length - elapsed - 0.001));
+      when = left === 0 ? 'Last working day' : `${plural(left, 'working day', 'working days')} left`;
+    } else if (sprint.state === 'future') {
+      const until = Math.ceil((sprint.start - new Date()) / DAY_MS);
+      when = until > 0 ? `Starts in ${plural(until, 'day', 'days')}` : 'Starting soon';
+    } else if (sprint.completeDate && (!sprint.end || startOfDay(sprint.completeDate).getTime() !== startOfDay(sprint.end).getTime())) {
+      when = `Closed ${fmtDay.format(sprint.completeDate)}`;
+    }
+
+    const meta = h('div', { class: 'sprint-meta' },
+      h('span', { class: 'sprint-name' }, sprint.name),
+      h('span', { class: 'state-pill' + (sprint.state === 'active' ? ' active' : '') }, stateText),
+      sprint.start && sprint.end ? h('span', null, `${fmtDay.format(sprint.start)} – ${fmtDay.format(sprint.end)}`) : null,
+      when ? h('span', null, when) : null,
+      h('span', { class: 'muted' }, `${plural(issues.length, 'issue', 'issues')}`)
+    );
+    const goal = sprint.goal
+      ? h('h1', { class: 'goal' }, sprint.goal)
+      : h('h1', { class: 'goal empty' }, 'This sprint has no goal set');
+
+    // Time row: one cell per working day. A gap marks each weekend.
+    const todayKey = startOfDay(new Date()).getTime();
+    const timeRow = h('div', { class: 'time-row', role: 'img',
+      'aria-label': `${fmtNum(Math.round(timeFrac * 100))}% of the sprint's working time used` });
+    days.forEach((d, idx) => {
+      const end = addDays(d, 1);
+      const p = now >= end ? 100 : now > d ? Math.round(((now - d) / (end - d)) * 100) : 0;
+      const isToday = sprint.state === 'active' && d.getTime() === todayKey;
+      const weekStart = idx > 0 && (d - days[idx - 1]) > DAY_MS;
+      timeRow.append(h('div', { class: 'day' + (isToday ? ' today' : '') + (weekStart ? ' week-start' : '') },
+        h('div', { class: 'day-cell', style: `background:linear-gradient(90deg, var(--elapsed) ${p}%, var(--card) ${p}%)` }),
+        h('span', { class: 'day-label' }, `${fmtWeekday.format(d)} ${d.getDate()}`)));
+    });
+
+    // Work row: done / in progress / to do, in the same width as time.
+    const workRow = h('div', { class: 'work-row', role: 'img',
+      'aria-label': STATE_ORDER.map((st) => `${st.label} ${fmtVal(t[st.cat])}`).join(', ') });
+    const segs = STATE_ORDER.filter((st) => t[st.cat] > 0).map((st) => {
+      const pct = (t[st.cat] / t.total) * 100;
+      const seg = h('div', { class: 'seg ' + st.cat, style: `flex: 0 1 ${heroAnimated ? pct : 0}%` });
+      seg.dataset.pct = pct;
+      seg.addEventListener('pointermove', (e) => showTooltip(e.clientX, e.clientY, st.label,
+        [{ key: swatch(st.color), value: fmtVal(t[st.cat]), label: `${Math.round(pct)}% of the sprint` }]));
+      seg.addEventListener('pointerleave', hideTooltip);
+      return seg;
+    });
+    workRow.append(...segs);
+
+    const bars = h('div', { class: 'bars' }, timeRow, workRow);
+    let line = null;
+    if (sprint.state !== 'future' && days.length) {
+      line = h('div', { class: 'today-line', style: `left:${heroAnimated ? timeFrac * 100 : 0}%` },
+        h('span', { class: 'today-tag' }, sprint.state === 'closed' ? 'Closed' : 'Today'));
+      bars.append(line);
+    }
+
+    const track = h('div', { class: 'track' },
+      h('div', { class: 'track-labels' },
+        h('div', { class: 'track-label time' }, 'Time'),
+        h('div', { class: 'track-label work' }, 'Work')),
+      bars);
+
+    const legend = h('div', { class: 'track-legend' },
+      STATE_ORDER.map((st) => h('span', { class: 'key' }, swatch(st.color),
+        h('span', null, `${st.label} `, h('strong', null, fmtVal(t[st.cat])),
+          st.cat === 'done' && t.total ? ` (${Math.round((t.done / t.total) * 100)}%)` : ''))),
+      addedKeys && addedKeys.size ? h('span', { class: 'key' }, icon('plus'),
+        h('span', null, `Added after start `, h('strong', null, plural(addedKeys.size, 'issue', 'issues')))) : null,
+      removedCount ? h('span', { class: 'key' },
+        h('span', null, `Removed `, h('strong', null, plural(removedCount, 'issue', 'issues')))) : null
+    );
+
+    fill($('hero'), meta, goal, track, legend, renderVerdict(sprint, t, timeFrac));
+
+    if (!heroAnimated) {
+      heroAnimated = true;
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        segs.forEach((seg) => { seg.style.flexBasis = seg.dataset.pct + '%'; });
+        if (line) line.style.left = timeFrac * 100 + '%';
+      }));
+    }
+  }
+
+  function renderVerdict(sprint, t, timeFrac) {
+    const pill = (tone, iconName, label) => h('span', { class: 'status-pill' }, icon(iconName, 'tone-' + tone), label);
+    if (!t.total) {
+      return h('p', { class: 'verdict' }, metric() === 'points'
+        ? 'No estimates in this sprint yet. Switch to Issues to track progress by count.'
+        : 'No issues in this sprint yet.');
+    }
+    if (sprint.state === 'future') {
+      return h('p', { class: 'verdict' }, `Planned: ${fmtVal(t.total)}. Progress tracking starts when the sprint does.`);
+    }
+    const pct = Math.round((t.done / t.total) * 100);
+    if (sprint.state === 'closed') {
+      return h('p', { class: 'verdict' },
+        pct === 100 ? pill('good', 'check', 'Completed') : pill('warning', 'alert', 'Partly completed'),
+        h('span', null, `Finished ${fmtVal(t.done)} of ${fmtVal(t.total)} (${pct}%).`));
+    }
+    const expected = t.total * timeFrac;
+    const gap = (expected - t.done) / t.total;
+    const diff = fmtVal(Math.round(Math.abs(expected - t.done) * 10) / 10);
+    let p, text;
+    if (gap <= -0.05) { p = pill('good', 'up', 'Ahead'); text = `${diff} ahead of the ideal pace for today.`; }
+    else if (gap <= 0.05) { p = pill('good', 'check', 'On track'); text = 'Done work matches the ideal pace for today.'; }
+    else if (gap <= 0.2) { p = pill('warning', 'alert', 'At risk'); text = `${diff} behind the ideal pace for today. The Today line shows where done work should reach.`; }
+    else { p = pill('critical', 'stop', 'Behind'); text = `${diff} behind the ideal pace for today. Consider cutting scope with the team.`; }
+    return h('p', { class: 'verdict' }, p, h('span', null, text));
+  }
+
+  // ======================================================================
+  // Rendering: filters
+  // ======================================================================
+  function renderFilters() {
+    const issues = state.data.issues;
+    const f = state.filters;
+    const people = new Map();
+    let hasUnassigned = false;
+    for (const i of issues) {
+      if (i.assignee) people.set(i.assignee.id, i.assignee.name); else hasUnassigned = true;
+    }
+    const sortedPeople = [...people.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+    const types = [...new Set(issues.map((i) => i.type))].sort();
+    const epics = new Map();
+    let noEpic = false;
+    for (const i of issues) { if (i.epic) epics.set(i.epic.key, i.epic.name); else noEpic = true; }
+
+    const personBtn = (id, name) => h('button', {
+      type: 'button', class: 'avatar' + (id === '__none' ? ' none' : ''), 'aria-pressed': String(f.people.has(id)),
+      'aria-label': `Show ${name}'s issues`, title: name,
+      onclick: () => { f.people.has(id) ? f.people.delete(id) : f.people.add(id); renderBelowFilters(); renderFilters(); },
+    }, id === '__none' ? icon('user') : initials(name));
+
+    const search = h('input', {
+      class: 'input', type: 'search', placeholder: 'Search key, summary or label', value: f.q, 'aria-label': 'Search issues',
+      oninput: (e) => { f.q = e.target.value; renderBelowFilters(); updateCount(); },
+    });
+    const count = h('span', { class: 'result-count', id: 'resultCount' });
+    const updateCount = () => {
+      const n = filteredIssues().length;
+      fill(count, filtersActive() ? `Showing ${n} of ${issues.length} issues ` : `${issues.length} issues`,
+        filtersActive() ? h('button', { type: 'button', class: 'linklike', onclick: clearFilters }, 'Clear filters') : null);
+    };
+
+    fill($('filters'), 
+      h('div', { class: 'search' }, icon('search'), search),
+      h('div', { class: 'people', role: 'group', 'aria-label': 'Filter by assignee' },
+        sortedPeople.map(([id, name]) => personBtn(id, name)),
+        hasUnassigned ? personBtn('__none', 'Unassigned') : null),
+      h('select', { class: 'select', 'aria-label': 'Filter by type', onchange: (e) => { f.type = e.target.value; renderBelowFilters(); renderFilters(); } },
+        h('option', { value: '' }, 'All types'),
+        types.map((tp) => h('option', { value: tp, selected: f.type === tp }, tp))),
+      h('select', { class: 'select', 'aria-label': 'Filter by epic', onchange: (e) => { f.epic = e.target.value; renderBelowFilters(); renderFilters(); } },
+        h('option', { value: '' }, 'All epics'),
+        [...epics.entries()].map(([key, name]) => h('option', { value: key, selected: f.epic === key }, name)),
+        noEpic ? h('option', { value: '__none', selected: f.epic === '__none' }, 'No epic') : null),
+      h('label', { class: 'check' },
+        h('input', { type: 'checkbox', checked: f.attention, onchange: (e) => { f.attention = e.target.checked; renderBelowFilters(); renderFilters(); } }),
+        'Needs attention only'),
+      count
+    );
+    updateCount();
+  }
+
+  function clearFilters() {
+    state.filters = { q: '', people: new Set(), type: '', epic: '', attention: false };
+    renderFilters();
+    renderBelowFilters();
+  }
+
+  // ======================================================================
+  // Rendering: burndown
+  // ======================================================================
+  function burndownModel(issues, sprint) {
+    const days = workingDays(sprint.start, sprint.end);
+    const now = sprintClock(sprint);
+    const total = sumOf(issues);
+    const doneAt = issues.filter((i) => i.category === 'done').map((i) => {
+      let tm = i.resolved || i.statusChanged || i.updated || sprint.start;
+      if (tm < sprint.start) tm = sprint.start;
+      return { t: tm, v: valueOf(i) };
+    });
+    const remainingAt = (tm) => total - doneAt.filter((e) => e.t <= tm).reduce((a, e) => a + e.v, 0);
+    const points = [{ x: 0, label: 'Sprint start', ideal: total, actual: sprint.state === 'future' ? null : remainingAt(sprint.start), doneThatDay: null }];
+    days.forEach((d, idx) => {
+      const end = addDays(d, 1);
+      const doneThatDay = doneAt.filter((e) => e.t >= d && e.t < end).reduce((a, e) => a + e.v, 0);
+      points.push({
+        x: idx + 1, day: d, label: `End of ${fmtFull.format(d)}`,
+        ideal: total * (1 - (idx + 1) / days.length),
+        actual: end <= now ? remainingAt(end) : null,
+        doneThatDay,
+      });
+    });
+    let nowPoint = null;
+    if (sprint.state === 'active' && days.length) {
+      const ex = elapsedWorkingDays(days, now);
+      if (ex > 0 && ex < days.length && !Number.isInteger(ex)) nowPoint = { x: ex, actual: remainingAt(now) };
+    }
+    return { days, total, points, nowPoint };
+  }
+
+  function niceTicks(max) {
+    if (max <= 0) return [0, 1];
+    const raw = max / 4;
+    const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    const step = (mag >= 10 ? [1, 2, 2.5, 5, 10] : [1, 2, 5, 10]).map((m) => m * mag).find((st) => st >= raw && st >= 1) || Math.max(1, mag * 10);
+    const top = Math.ceil(max / step) * step;
+    const ticks = [];
+    for (let v = 0; v <= top + 1e-9; v += step) ticks.push(Math.round(v * 100) / 100);
+    return ticks;
+  }
+
+  function renderBurndown(issues) {
+    const panel = $('burndownPanel');
+    const sprint = state.data.sprint;
+    const model = burndownModel(issues, sprint);
+    const unitLabel = metric() === 'issues' ? 'issues' : state.config.estimate.unit === 'h' ? 'hours' : 'story points';
+    const head = h('div', null,
+      h('div', { class: 'panel-head' }, h('h2', null, 'Burndown')),
+      h('p', { class: 'sub' }, `Remaining ${unitLabel}, ideal pace over working days`),
+      h('div', { class: 'legend' },
+        h('span', { class: 'key' }, lineKey('var(--series-1)'), 'Remaining'),
+        h('span', { class: 'key' }, lineKey('var(--muted)'), 'Ideal pace')));
+    const chart = h('div', { class: 'chart' });
+    fill(panel, head, chart, burndownTable(model));
+    if (!model.days.length) {
+      chart.append(h('p', { class: 'empty-note' }, 'This sprint has no start and end dates yet.'));
+      return;
+    }
+    drawBurndown(chart, model);
+  }
+
+  function burndownTable(model) {
+    return h('details', { class: 'data-table' },
+      h('summary', null, 'Show as table'),
+      h('table', { class: 'mini-table' },
+        h('thead', null, h('tr', null, h('th', null, 'Day'), h('th', { class: 'r' }, 'Remaining'), h('th', { class: 'r' }, 'Ideal'), h('th', { class: 'r' }, 'Done that day'))),
+        h('tbody', null, model.points.map((p) => h('tr', null,
+          h('td', null, p.day ? fmtFull.format(p.day) : 'Start'),
+          h('td', { class: 'r' }, p.actual == null ? '–' : fmtNum(p.actual)),
+          h('td', { class: 'r' }, fmtNum(Math.round(p.ideal * 10) / 10)),
+          h('td', { class: 'r' }, p.doneThatDay == null ? '–' : fmtNum(p.doneThatDay)))))));
+  }
+
+  function drawBurndown(container, model) {
+    const width = Math.max(280, container.clientWidth || 480);
+    const height = 230;
+    const m = { top: 22, right: 40, bottom: 28, left: 34 };
+    const pw = width - m.left - m.right;
+    const ph = height - m.top - m.bottom;
+    const n = model.days.length;
+    const ticks = niceTicks(Math.max(model.total, ...model.points.map((p) => p.actual || 0)));
+    const yMax = ticks[ticks.length - 1] || 1;
+    const X = (x) => m.left + (x / n) * pw;
+    const Y = (v) => m.top + ph * (1 - v / yMax);
+
+    const svg = s('svg', { viewBox: `0 0 ${width} ${height}`, height, tabindex: 0, role: 'img',
+      'aria-label': `Burndown chart. ${fmtVal(model.total)} at start. Use left and right arrow keys to read each day.` });
+
+    // Grid + y ticks
+    for (const v of ticks) {
+      svg.append(s('line', { x1: m.left, x2: width - m.right, y1: Y(v), y2: Y(v), stroke: v === 0 ? 'var(--line)' : 'var(--hair)', 'stroke-width': 1 }));
+      svg.append(s('text', { x: m.left - 8, y: Y(v) + 4, 'text-anchor': 'end', class: 'axis-text' }, fmtNum(v)));
+    }
+    // Weekend boundaries and x labels
+    const slot = pw / n;
+    const longLabels = slot >= 52;
+    model.days.forEach((d, idx) => {
+      if (idx > 0 && d - model.days[idx - 1] > DAY_MS) {
+        svg.append(s('line', { x1: X(idx), x2: X(idx), y1: m.top, y2: m.top + ph, stroke: 'var(--hair)', 'stroke-width': 1 }));
+      }
+      const every = slot < 22 ? 2 : 1;
+      if (idx % every === 0) {
+        svg.append(s('text', { x: X(idx + 0.5), y: height - 8, 'text-anchor': 'middle', class: 'axis-text' },
+          longLabels ? `${fmtWeekday.format(d)} ${d.getDate()}` : String(d.getDate())));
+      }
+    });
+
+    // Ideal
+    svg.append(s('polyline', { points: model.points.map((p) => `${X(p.x)},${Y(p.ideal)}`).join(' '),
+      fill: 'none', stroke: 'var(--muted)', 'stroke-width': 1.5, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+
+    // Remaining
+    const actual = model.points.filter((p) => p.actual != null).map((p) => ({ x: p.x, v: p.actual }));
+    if (model.nowPoint) actual.push({ x: model.nowPoint.x, v: model.nowPoint.actual });
+    if (actual.length) {
+      svg.append(s('polyline', { points: actual.map((p) => `${X(p.x)},${Y(p.v)}`).join(' '),
+        fill: 'none', stroke: 'var(--series-1)', 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+      const last = actual[actual.length - 1];
+      svg.append(s('circle', { cx: X(last.x), cy: Y(last.v), r: 4.5, fill: 'var(--series-1)', stroke: 'var(--card)', 'stroke-width': 2 }));
+      svg.append(s('text', { x: X(last.x) + 9, y: Y(last.v) + 4, class: 'end-label' }, fmtNum(last.v)));
+    }
+
+    // Today marker
+    if (model.nowPoint || (state.data.sprint.state === 'active' && actual.length)) {
+      const tx = X(model.nowPoint ? model.nowPoint.x : actual[actual.length - 1].x);
+      svg.append(s('line', { x1: tx, x2: tx, y1: m.top - 4, y2: m.top + ph, stroke: 'var(--ink)', 'stroke-width': 1.5 }));
+      const tag = s('g', { transform: `translate(${tx}, ${m.top - 12})` },
+        s('rect', { x: -20, y: -9, width: 40, height: 16, rx: 3, fill: 'var(--accent)' }),
+        s('text', { x: 0, y: 3, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 700, fill: '#14202b' }, 'Today'));
+      svg.append(tag);
+    }
+
+    // Crosshair layer
+    const cross = s('line', { y1: m.top, y2: m.top + ph, stroke: 'var(--ink-2)', 'stroke-width': 1, visibility: 'hidden' });
+    const crossDot = s('circle', { r: 4.5, fill: 'var(--series-1)', stroke: 'var(--card)', 'stroke-width': 2, visibility: 'hidden' });
+    const hit = s('rect', { x: m.left, y: m.top, width: pw, height: ph, fill: 'transparent' });
+    svg.append(cross, crossDot, hit);
+
+    let focusIdx = null;
+    function show(idx, clientX, clientY) {
+      focusIdx = idx;
+      const p = model.points[idx];
+      cross.setAttribute('x1', X(p.x)); cross.setAttribute('x2', X(p.x)); cross.setAttribute('visibility', 'visible');
+      if (p.actual != null) {
+        crossDot.setAttribute('cx', X(p.x)); crossDot.setAttribute('cy', Y(p.actual)); crossDot.setAttribute('visibility', 'visible');
+      } else crossDot.setAttribute('visibility', 'hidden');
+      const rows = [];
+      if (p.actual != null) rows.push({ key: lineKey('var(--series-1)'), value: fmtVal(p.actual), label: 'remaining' });
+      rows.push({ key: lineKey('var(--muted)'), value: fmtVal(Math.round(p.ideal * 10) / 10), label: 'ideal' });
+      if (p.doneThatDay) rows.push({ value: fmtVal(p.doneThatDay), label: 'completed that day' });
+      if (clientX == null) {
+        const r = svg.getBoundingClientRect();
+        clientX = r.left + (X(p.x) / width) * r.width; clientY = r.top + r.height * 0.3;
+      }
+      showTooltip(clientX, clientY, p.label, rows);
+    }
+    function hide() { cross.setAttribute('visibility', 'hidden'); crossDot.setAttribute('visibility', 'hidden'); hideTooltip(); }
+    hit.addEventListener('pointermove', (e) => {
+      const r = svg.getBoundingClientRect();
+      const px = ((e.clientX - r.left) / r.width) * width;
+      const idx = clamp(Math.round(((px - m.left) / pw) * n), 0, n);
+      show(idx, e.clientX, e.clientY);
+    });
+    hit.addEventListener('pointerleave', hide);
+    svg.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+        e.preventDefault();
+        const next = focusIdx == null ? 0 : clamp(focusIdx + (e.key === 'ArrowRight' ? 1 : -1), 0, n);
+        show(next);
+      } else if (e.key === 'Escape') hide();
+    });
+    svg.addEventListener('blur', hide);
+    fill(container, svg);
+  }
+
+  // ======================================================================
+  // Rendering: team load
+  // ======================================================================
+  function renderWorkload(issues) {
+    const groups = new Map();
+    for (const i of issues) {
+      const id = i.assignee ? i.assignee.id : '__none';
+      if (!groups.has(id)) groups.set(id, { id, name: i.assignee ? i.assignee.name : 'Unassigned', issues: [] });
+      groups.get(id).issues.push(i);
+    }
+    const rows = [...groups.values()].map((g) => ({ ...g, t: totalsByCategory(g.issues) }))
+      .sort((a, b) => (a.id === '__none') - (b.id === '__none') || b.t.total - a.t.total || a.name.localeCompare(b.name));
+    const max = Math.max(1, ...rows.map((r) => r.t.total));
+    const f = state.filters;
+
+    const list = h('div', { class: 'load-rows' });
+    for (const r of rows) {
+      const track = h('div', { class: 'load-track', style: `width:${(r.t.total / max) * 100}%` });
+      for (const st of STATE_ORDER) {
+        const v = r.t[st.cat];
+        if (!v) continue;
+        const count = r.issues.filter((i) => i.category === st.cat).length;
+        const seg = h('div', { class: 'seg ' + st.cat, style: `flex:${v} 1 0` });
+        seg.addEventListener('pointermove', (e) => showTooltip(e.clientX, e.clientY, r.name,
+          [{ key: swatch(st.color), value: fmtVal(v), label: `${st.label.toLowerCase()} (${plural(count, 'issue', 'issues')})` }]));
+        seg.addEventListener('pointerleave', hideTooltip);
+        track.append(seg);
+      }
+      const pressed = f.people.size === 1 && f.people.has(r.id);
+      list.append(h('button', {
+        type: 'button', class: 'load-row', 'aria-pressed': String(pressed),
+        'aria-label': `${r.name}: ${STATE_ORDER.map((st) => `${st.label} ${fmtVal(r.t[st.cat])}`).join(', ')}. ${pressed ? 'Show everyone' : 'Show only ' + r.name}.`,
+        onclick: () => { f.people = pressed ? new Set() : new Set([r.id]); renderFilters(); renderBelowFilters(); },
+      },
+        h('span', { class: 'load-name' }, r.name),
+        h('span', { class: 'load-bar' }, h('span', { class: 'load-scale', style: 'display:block' }, track,
+          h('span', { class: 'load-value', style: `left:${(r.t.total / max) * 100}%` }, fmtVal(r.t.total))))));
+    }
+
+    fill($('workloadPanel'), 
+      h('div', { class: 'panel-head' }, h('h2', null, 'Team load')),
+      h('p', { class: 'sub' }, `${metric() === 'issues' ? 'Issues' : 'Estimates'} per person by status. Click a person to filter.`),
+      h('div', { class: 'legend' }, STATE_ORDER.map((st) => h('span', { class: 'key' }, swatch(st.color), st.label))),
+      rows.length ? list : h('p', { class: 'empty-note' }, 'No issues match the filters.'));
+  }
+
+  // ======================================================================
+  // Rendering: needs attention
+  // ======================================================================
+  function renderAttention(issues) {
+    const sp = state.data.sprint;
+    const now = sprintClock(sp);
+    const days = workingDays(sp.start, sp.end);
+    const timeFrac = days.length ? elapsedWorkingDays(days, now) / days.length : 0;
+    const items = issues.map((i) => ({ issue: i, reasons: attentionReasons(i, sp, timeFrac, now) }))
+      .filter((x) => x.reasons.length)
+      .sort((a, b) => Math.max(...b.reasons.map((r) => r.rank)) - Math.max(...a.reasons.map((r) => r.rank)) || b.issue.priorityRank - a.issue.priorityRank);
+
+    const list = h('ul', { class: 'attention-list' }, items.map(({ issue, reasons }) => h('li', null,
+      h('button', { type: 'button', class: 'attention-item', onclick: (e) => openDrawer(issue, e.currentTarget) },
+        h('span', { style: `color:var(--type-${issue.typeKind})`, title: issue.type }, icon(issue.typeKind)),
+        h('span', { class: 'what' },
+          h('span', { class: 'summary-line' }, h('span', { class: 'issue-key muted' }, issue.key + '  '), issue.summary),
+          h('span', { class: 'reasons' }, reasons.map((r) => h('span', { class: 'reason' }, icon(r.icon, 'tone-' + r.tone), r.text))))))));
+
+    fill($('attentionPanel'), 
+      h('div', { class: 'panel-head' }, h('h2', null, 'Needs attention'), h('span', { class: 'muted num' }, items.length ? String(items.length) : '')),
+      h('p', { class: 'sub' }, 'Blocked, stalled, unassigned or unestimated work'),
+      items.length ? list : h('p', { class: 'empty-note' }, sp.state === 'future' ? 'Nothing flagged in the plan.' : 'Nothing needs attention right now.'));
+  }
+
+  // ======================================================================
+  // Rendering: board and list
+  // ======================================================================
+  function priorityIcon(issue) {
+    const tone = issue.priorityRank >= 5 ? 'critical' : issue.priorityRank === 4 ? 'serious' : 'muted';
+    return h('span', { class: 'prio tone-' + tone, title: `${issue.priority} priority` }, icon('p' + issue.priorityRank),
+      h('span', { class: 'sr-only' }, `${issue.priority} priority`));
+  }
+  function estimateBadge(issue) {
+    if (!usesEstimates()) return null;
+    const unit = state.config.estimate.unit === 'h' ? 'hours' : 'story points';
+    return issue.estimate == null
+      ? h('span', { class: 'est none', title: 'No estimate' }, '–')
+      : h('span', { class: 'est', title: `${fmtNum(issue.estimate)} ${unit}` }, fmtNum(issue.estimate));
+  }
+  function avatar(person, cls = 'sm') {
+    return person
+      ? h('span', { class: 'avatar ' + cls, title: person.name }, initials(person.name))
+      : h('span', { class: 'avatar none ' + cls, title: 'Unassigned' }, icon('user'));
+  }
+
+  function card(issue) {
+    const done = issue.subtasks.filter((st) => st.done).length;
+    return h('button', {
+      type: 'button',
+      class: 'card' + (isBlocked(issue) ? ' blocked' : '') + (issue.category === 'done' ? ' is-done' : ''),
+      'aria-label': `${issue.key}: ${issue.summary}`,
+      onclick: (e) => openDrawer(issue, e.currentTarget),
+    },
+      h('div', { class: 'card-top' },
+        h('span', { style: `color:var(--type-${issue.typeKind})`, title: issue.type }, icon(issue.typeKind)),
+        h('span', null, issue.key),
+        priorityIcon(issue)),
+      h('div', { class: 'card-summary' }, issue.summary),
+      isBlocked(issue) ? h('span', { class: 'blocked-label' }, icon('flag'), issue.flagged ? 'Blocked' : issue.status) : null,
+      issue.epic ? h('span', { class: 'epic-tag' }, h('span', { class: 'dot', style: `background:${epicColor(issue.epic)}` }), h('span', null, issue.epic.name)) : null,
+      h('div', { class: 'card-foot' },
+        avatar(issue.assignee),
+        issue.subtasks.length ? h('span', { class: 'meta-bit', title: `${done} of ${issue.subtasks.length} subtasks done` }, icon('subtask'), `${done}/${issue.subtasks.length}`) : null,
+        issue.added ? h('span', { class: 'meta-bit', title: 'Added after the sprint started' }, icon('plus'), 'Added') : null,
+        estimateBadge(issue)));
+  }
+
+  function columnsFor(issues) {
+    const cols = (state.config.columns.length ? state.config.columns : [
+      { name: 'To Do', cats: ['todo'] }, { name: 'In Progress', cats: ['progress'] }, { name: 'Done', cats: ['done'] },
+    ]).map((c) => ({ ...c, issues: [] }));
+    const other = { name: 'Other statuses', issues: [] };
+    for (const i of issues) {
+      const col = cols.find((c) => (c.statusIds ? c.statusIds.includes(i.statusId) : c.cats.includes(i.category)));
+      (col || other).issues.push(i);
+    }
+    if (other.issues.length) cols.push(other);
+    return cols;
+  }
+  function columnCategory(col, allIssues) {
+    const pool = allIssues.filter((i) => (col.statusIds ? col.statusIds.includes(i.statusId) : col.cats && col.cats.includes(i.category)));
+    if (!pool.length) return col.cats ? col.cats[0] : null;
+    const counts = {};
+    pool.forEach((i) => { counts[i.category] = (counts[i.category] || 0) + 1; });
+    return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+  }
+
+  function renderBoardSection(issues) {
+    const section = $('boardSection');
+    const viewToggle = h('div', { class: 'segmented', role: 'group', 'aria-label': 'View' },
+      ['board', 'list'].map((v) => h('button', { type: 'button', 'aria-pressed': String(prefs.view === v),
+        onclick: () => { prefs.view = v; savePrefs(); renderBoardSection(filteredIssues()); } }, v === 'board' ? 'Board' : 'List')));
+    const lanes = prefs.view === 'board' ? h('select', { class: 'select', 'aria-label': 'Swimlanes',
+      onchange: (e) => { prefs.lanes = e.target.value; savePrefs(); renderBoardSection(filteredIssues()); } },
+      [['none', 'No swimlanes'], ['assignee', 'Swimlanes by assignee'], ['epic', 'Swimlanes by epic']]
+        .map(([v, label]) => h('option', { value: v, selected: prefs.lanes === v }, label))) : null;
+
+    fill(section, 
+      h('div', { class: 'section-head' }, h('h2', null, prefs.view === 'board' ? 'Board' : 'Issues'), lanes, viewToggle),
+      prefs.view === 'board' ? boardView(issues) : listView(issues));
+  }
+
+  function boardView(issues) {
+    const allIssues = state.data.issues;
+    const cols = columnsFor(issues);
+    const colCount = cols.length;
+    const board = h('div', { class: 'board', style: `--cols:${colCount}` });
+    board.append(h('div', { class: 'cols' }, cols.map((c) => {
+      const cat = columnCategory(c, allIssues);
+      return h('div', { class: 'col-head' + (cat ? ' cat-' + cat : '') },
+        h('span', { class: 'col-name' }, c.name),
+        h('span', { class: 'col-stats' }, plural(c.issues.length, 'issue', 'issues') + (metric() === 'points' ? `, ${fmtVal(sumOf(c.issues))}` : '')));
+    })));
+
+    let lanes;
+    if (prefs.lanes === 'assignee') {
+      const map = new Map();
+      for (const i of issues) {
+        const id = i.assignee ? i.assignee.id : '__none';
+        if (!map.has(id)) map.set(id, { id, title: i.assignee ? i.assignee.name : 'Unassigned', person: i.assignee, none: !i.assignee, issues: [] });
+        map.get(id).issues.push(i);
+      }
+      lanes = [...map.values()].sort((a, b) => a.none - b.none || a.title.localeCompare(b.title));
+    } else if (prefs.lanes === 'epic') {
+      const map = new Map();
+      for (const i of issues) {
+        const id = i.epic ? i.epic.key : '__none';
+        if (!map.has(id)) map.set(id, { id, title: i.epic ? i.epic.name : 'No epic', epic: i.epic, none: !i.epic, issues: [] });
+        map.get(id).issues.push(i);
+      }
+      lanes = [...map.values()].sort((a, b) => a.none - b.none || a.title.localeCompare(b.title));
+    } else {
+      lanes = [{ id: '__all', issues }];
+    }
+
+    for (const lane of lanes) {
+      const laneCols = columnsFor(lane.issues);
+      // Keep every lane aligned with the header even if a lane lacks "Other statuses".
+      while (laneCols.length < colCount) laneCols.push({ name: '', issues: [] });
+      const collapsed = state.collapsedLanes.has(prefs.lanes + ':' + lane.id);
+      const cells = h('div', { class: 'cols', hidden: collapsed },
+        laneCols.slice(0, colCount).map((c) => h('div', { class: 'cell' }, c.issues.length ? c.issues.map(card) : h('div', { class: 'cell-empty', 'aria-hidden': 'true' }))));
+      const laneEl = h('div', { class: 'lane' });
+      if (lane.id !== '__all') {
+        laneEl.append(h('button', {
+          type: 'button', class: 'lane-head', 'aria-expanded': String(!collapsed),
+          onclick: (e) => {
+            const k = prefs.lanes + ':' + lane.id;
+            const open = state.collapsedLanes.has(k);
+            open ? state.collapsedLanes.delete(k) : state.collapsedLanes.add(k);
+            e.currentTarget.setAttribute('aria-expanded', String(open));
+            cells.hidden = !open;
+          },
+        },
+          icon('chevron', 'chev'),
+          lane.epic ? h('span', { class: 'dot', style: `background:${epicColor(lane.epic)}` }) : null,
+          prefs.lanes === 'assignee' ? avatar(lane.person) : null,
+          h('span', { class: 'lane-title' }, lane.title),
+          h('span', { class: 'lane-stats' }, `${plural(lane.issues.length, 'issue', 'issues')}` + (metric() === 'points' ? `, ${fmtVal(sumOf(lane.issues))}` : ''))));
+      }
+      laneEl.append(cells);
+      board.append(laneEl);
+    }
+    if (!issues.length) board.append(h('p', { class: 'empty-note' }, filtersActive() ? 'No issues match the filters.' : 'This sprint has no issues.'));
+    return h('div', { class: 'board-scroll' }, board);
+  }
+
+  function listView(issues) {
+    const rank = new Map(state.data.issues.map((i, idx) => [i.key, idx]));
+    const columns = [
+      { key: 'rank', label: 'Key', get: (i) => rank.get(i.key), cell: (i) => h('span', { class: 'status-chip' }, h('span', { style: `color:var(--type-${i.typeKind})`, title: i.type }, icon(i.typeKind)), i.key) },
+      { key: 'summary', label: 'Summary', get: (i) => i.summary.toLowerCase(), cell: (i) => i.summary, cls: 'summary' },
+      { key: 'status', label: 'Status', get: (i) => ['todo', 'progress', 'done'].indexOf(i.category) * 100 + (i.status || '').charCodeAt(0),
+        cell: (i) => h('span', { class: 'status-chip' }, swatch(`var(--st-${i.category})`), i.status) },
+      { key: 'assignee', label: 'Assignee', get: (i) => (i.assignee ? i.assignee.name : '~'), cell: (i) => (i.assignee ? i.assignee.name : h('span', { class: 'muted' }, 'Unassigned')) },
+      { key: 'epic', label: 'Epic', get: (i) => (i.epic ? i.epic.name : '~'), cell: (i) => (i.epic ? h('span', { class: 'epic-tag' }, h('span', { class: 'dot', style: `background:${epicColor(i.epic)}` }), h('span', null, i.epic.name)) : h('span', { class: 'muted' }, '–')) },
+      { key: 'priority', label: 'Priority', get: (i) => -i.priorityRank, cell: (i) => h('span', { class: 'status-chip' }, priorityIcon(i), i.priority) },
+      usesEstimates() ? { key: 'estimate', label: state.config.estimate.unit === 'h' ? 'Hours' : 'Points', r: true, get: (i) => (i.estimate == null ? -1 : i.estimate), cell: (i) => (i.estimate == null ? h('span', { class: 'muted' }, '–') : fmtNum(i.estimate)) } : null,
+      { key: 'updated', label: 'Updated', get: (i) => (i.updated ? -i.updated.getTime() : 0), cell: (i) => (i.updated ? fmtDay.format(i.updated) : '–') },
+    ].filter(Boolean);
+    const col = columns.find((c) => c.key === state.sort.key) || columns[0];
+    const rows = [...issues].sort((a, b) => {
+      const x = col.get(a), y = col.get(b);
+      return (x < y ? -1 : x > y ? 1 : 0) * state.sort.dir;
+    });
+    const table = h('table', { class: 'issues' },
+      h('thead', null, h('tr', null, columns.map((c) => h('th', {
+        class: c.r ? 'r' : null, 'aria-sort': state.sort.key === c.key ? (state.sort.dir > 0 ? 'ascending' : 'descending') : null,
+      }, h('button', { type: 'button', onclick: () => {
+        state.sort = { key: c.key, dir: state.sort.key === c.key ? -state.sort.dir : 1 };
+        renderBoardSection(filteredIssues());
+      } }, c.label, icon('sort')))))),
+      h('tbody', null, rows.map((i) => {
+        const tr = h('tr', { tabindex: 0, 'aria-label': `${i.key}: ${i.summary}` }, columns.map((c) => h('td', { class: [c.cls, c.r ? 'r' : ''].filter(Boolean).join(' ') || null }, c.cell(i))));
+        tr.addEventListener('click', () => openDrawer(i, tr));
+        tr.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDrawer(i, tr); } });
+        return tr;
+      })));
+    return issues.length ? h('div', { class: 'table-wrap' }, table) : h('p', { class: 'empty-note' }, 'No issues match the filters.');
+  }
+
+  // ======================================================================
+  // Drawer: one issue in detail
+  // ======================================================================
+  const drawer = $('drawer');
+  const scrim = $('scrim');
+  let drawerReturnFocus = null;
+
+  function openDrawer(issue, from) {
+    drawerReturnFocus = from || null;
+    const done = issue.subtasks.filter((st) => st.done).length;
+    const fact = (label, ...value) => [h('dt', null, label), h('dd', null, ...value)];
+    const fmt = (d) => (d ? fmtDateTime.format(d) : '–');
+    const closeBtn = h('button', { type: 'button', class: 'btn', onclick: closeDrawer, 'aria-label': 'Close details' }, icon('close'), 'Close');
+    fill(drawer, 
+      h('div', { class: 'drawer-top' },
+        h('span', { style: `color:var(--type-${issue.typeKind})` }, icon(issue.typeKind)),
+        h('span', null, `${issue.type}  ${issue.key}`),
+        closeBtn),
+      h('h2', { id: 'drawerTitle' }, issue.summary),
+      h('div', { class: 'drawer-status' },
+        h('span', { class: 'status-pill' }, swatch(`var(--st-${issue.category})`), issue.status),
+        isBlocked(issue) ? h('span', { class: 'status-pill' }, icon('flag', 'tone-critical'), issue.flagged ? 'Blocked' : issue.status) : null,
+        issue.added ? h('span', { class: 'status-pill' }, icon('plus'), 'Added after start') : null,
+        issue.url
+          ? h('a', { class: 'btn', href: issue.url, target: '_blank', rel: 'noopener noreferrer' }, icon('external'), 'Open in Jira')
+          : h('span', { class: 'muted', style: 'font-size:13px' }, 'Demo issue, not in Jira')),
+      h('dl', { class: 'facts' },
+        fact('Assignee', avatar(issue.assignee), issue.assignee ? issue.assignee.name : 'Unassigned'),
+        fact('Reporter', issue.reporter ? issue.reporter.name : '–'),
+        fact('Priority', priorityIcon(issue), issue.priority),
+        usesEstimates() ? fact('Estimate', issue.estimate == null ? 'Not estimated' : `${fmtNum(issue.estimate)} ${state.config.estimate.unit === 'h' ? 'hours' : 'story points'}`) : null,
+        fact('Epic', issue.epic ? [h('span', { class: 'dot', style: `background:${epicColor(issue.epic)}` }), `${issue.epic.name} (${issue.epic.key})`] : '–'),
+        issue.labels.length ? fact('Labels', issue.labels.map((l) => h('span', { class: 'chip' }, l))) : null,
+        issue.components.length ? fact('Components', issue.components.join(', ')) : null,
+        fact('Created', fmt(issue.created)),
+        fact('Updated', fmt(issue.updated)),
+        issue.resolved ? fact('Resolved', fmt(issue.resolved)) : null,
+        issue.category === 'progress' && issue.statusChanged ? fact('In progress since', fmt(issue.statusChanged)) : null),
+      h('h3', null, 'Description'),
+      issue.description ? h('p', { class: 'description' }, issue.description) : h('p', { class: 'muted' }, 'No description.'),
+      issue.subtasks.length ? [
+        h('h3', null, `Subtasks  ${done}/${issue.subtasks.length}`),
+        h('ul', { class: 'subtasks' }, issue.subtasks.map((st) => h('li', { class: st.done ? 'done' : '' },
+          st.done ? icon('check', 'tone-good') : h('span', { class: 'swatch', style: 'background:var(--hair);border-radius:50%' }),
+          h('span', null, `${st.key}  ${st.summary}`)))),
+      ] : null);
+    drawer.hidden = false;
+    scrim.hidden = false;
+    requestAnimationFrame(() => drawer.classList.remove('closed'));
+    closeBtn.focus();
+  }
+  function closeDrawer() {
+    if (drawer.hidden) return;
+    drawer.classList.add('closed');
+    scrim.hidden = true;
+    setTimeout(() => { drawer.hidden = true; }, 200);
+    if (drawerReturnFocus && document.contains(drawerReturnFocus)) drawerReturnFocus.focus();
+  }
+  scrim.addEventListener('click', closeDrawer);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !drawer.hidden) closeDrawer();
+    if (e.key === 'Tab' && !drawer.hidden) {
+      const focusables = drawer.querySelectorAll('button, a[href], [tabindex="0"]');
+      if (!focusables.length) return;
+      const first = focusables[0], last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  });
+
+  // ======================================================================
+  // Top-level render
+  // ======================================================================
+  function renderBelowFilters() {
+    const issues = filteredIssues();
+    renderBurndown(issues);
+    renderWorkload(issues);
+    renderAttention(issues);
+    renderBoardSection(issues);
+  }
+  function renderAll() {
+    state.data.issues.forEach((i) => epicColor(i.epic));
+    renderHero();
+    renderFilters();
+    renderBelowFilters();
+  }
+  function renderMetricToggle() {
+    const toggle = $('metricToggle');
+    toggle.hidden = !usesEstimates();
+    for (const b of toggle.querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.metric === metric()));
+  }
+
+  function setBusy(text) { $('busy').textContent = text || ''; }
+  function showBanner(message, retry) {
+    fill($('banner'), message ? h('div', { class: 'banner', role: 'alert' }, icon('stop'), h('span', null, message),
+      retry ? h('button', { type: 'button', class: 'btn', onclick: retry }, 'Try again') : null) : '');
+  }
+  function showScreen(name, note) {
+    $('connect').hidden = name !== 'connect';
+    $('sprintView').hidden = name !== 'sprint';
+    $('pageNote').hidden = name !== 'note';
+    if (note) $('pageNote').textContent = note;
+    const inSprint = name === 'sprint';
+    $('pickers').hidden = !inSprint;
+    $('refreshBtn').hidden = !inSprint;
+    $('connectionBtn').hidden = name === 'connect';
+    $('sourceTag').hidden = !state.source || name === 'connect';
+  }
+
+  function sprintOptionLabel(sp) {
+    const tag = { active: 'active', future: 'upcoming', closed: 'closed' }[sp.state] || sp.state;
+    return `${sp.name} (${tag})`;
+  }
+  function renderPickers() {
+    fill($('boardSelect'), ...state.boards.map((b) => h('option', { value: String(b.id), selected: b.id === state.boardId }, b.name)));
+    $('boardSelect').disabled = state.boards.length < 2;
+    const groups = [['active', 'Active'], ['future', 'Upcoming'], ['closed', 'Closed']];
+    fill($('sprintSelect'), ...groups.map(([st, label]) => {
+      let list = state.sprints.filter((sp) => sp.state === st);
+      if (st === 'closed') list = list.slice().sort((a, b) => (b.completeDate || b.end || 0) - (a.completeDate || a.end || 0));
+      return list.length ? h('optgroup', { label }, list.map((sp) => h('option', { value: String(sp.id), selected: sp.id === state.sprintId }, sprintOptionLabel(sp)))) : null;
+    }).filter(Boolean));
+  }
+
+  // ======================================================================
+  // Loading flow: boards -> board config + sprints -> sprint issues
+  // ======================================================================
+  async function start(source, project) {
+    state.source = source;
+    state.epicColor = new Map();
+    const tag = $('sourceTag');
+    tag.textContent = source.label;
+    tag.className = 'source-tag' + (source.kind === 'demo' ? ' demo' : '');
+    state.boards = await source.listBoards(project);
+    const saved = store.get('localStorage', 'sprintboard:conn', {});
+    const preferred = source.kind === 'live' && state.boards.find((b) => b.id === saved.boardId);
+    await selectBoard((preferred || state.boards[0]).id);
+  }
+
+  async function selectBoard(boardId) {
+    const seq = ++state.loadSeq;
+    state.boardId = boardId;
+    setBusy('Loading board…');
+    const [config, sprints] = await Promise.all([state.source.boardConfig(boardId), state.source.listSprints(boardId)]);
+    if (seq !== state.loadSeq) return;
+    state.config = config;
+    state.sprints = sprints;
+    if (state.source.kind === 'live') {
+      const saved = store.get('localStorage', 'sprintboard:conn', {});
+      store.set('localStorage', 'sprintboard:conn', { ...saved, boardId });
+    }
+    const pick = sprints.find((sp) => sp.state === 'active') ||
+      sprints.filter((sp) => sp.state === 'closed').sort((a, b) => (b.completeDate || b.end || 0) - (a.completeDate || a.end || 0))[0] ||
+      sprints.find((sp) => sp.state === 'future');
+    if (!pick) {
+      setBusy('');
+      renderPickers();
+      showScreen('note', 'This board has no sprints yet. Create one in Jira, then refresh.');
+      $('pickers').hidden = false;
+      return;
+    }
+    await selectSprint(pick.id);
+  }
+
+  async function selectSprint(sprintId) {
+    const seq = ++state.loadSeq;
+    state.sprintId = sprintId;
+    renderPickers();
+    renderMetricToggle();
+    const sprint = state.sprints.find((sp) => sp.id === sprintId);
+    setBusy('Loading sprint…');
+    if (state.data) $('sprintView').classList.add('loading');
+    try {
+      const result = await state.source.loadSprint(state.boardId, sprintId, state.config);
+      if (seq !== state.loadSeq) return;
+      if (!sprint.start) sprint.start = new Date();
+      if (!sprint.end) sprint.end = addDays(sprint.start, 14);
+      const keepFilters = state.data && state.data.sprint.id === sprintId;
+      state.data = { sprint, ...result };
+      if (!keepFilters) state.filters = { q: '', people: new Set(), type: '', epic: '', attention: false };
+      showBanner('');
+      showScreen('sprint');
+      renderAll();
+    } catch (err) {
+      if (seq !== state.loadSeq) return;
+      if (state.data) showBanner(`Couldn't load ${sprint ? sprint.name : 'the sprint'}: ${err.message}`, () => selectSprint(sprintId));
+      else throw err;
+    } finally {
+      if (seq === state.loadSeq) {
+        setBusy('');
+        $('sprintView').classList.remove('loading');
+      }
+    }
+  }
+
+  // ======================================================================
+  // Connect form
+  // ======================================================================
+  const isServed = location.protocol === 'http:' || location.protocol === 'https:';
+
+  // Shows the connect form. Fields are refilled from the saved connection unless
+  // keepFields is set (after a failed attempt, keep what the person just typed).
+  function showConnect(message, { keepFields } = {}) {
+    if (!keepFields) {
+      const saved = store.get('localStorage', 'sprintboard:conn', {});
+      $('fUrl').value = saved.baseUrl || '';
+      $('fProject').value = saved.project || '';
+      $('fEmail').value = saved.email || '';
+      $('fToken').value = store.get('sessionStorage', 'sprintboard:token', '') || '';
+      if (saved.email) $('fEmail').closest('details').open = true;
+    }
+    $('fileNotice').hidden = isServed;
+    $('connectBtn').disabled = !isServed;
+    setFormError(message);
+    showScreen('connect');
+  }
+  function setFormError(message) {
+    const el = $('formError');
+    el.hidden = !message;
+    fill(el, message ? icon('stop', 'tone-critical') : '', message ? h('span', null, message) : '');
+  }
+
+  async function connectLive(conn, { silent } = {}) {
+    setBusy('Connecting…');
+    $('connectBtn').disabled = true;
+    try {
+      await start(liveSource(conn), conn.project);
+      const saved = store.get('localStorage', 'sprintboard:conn', {});
+      store.set('localStorage', 'sprintboard:conn', { ...saved, baseUrl: conn.baseUrl, project: conn.project, email: conn.email || '' });
+      store.set('sessionStorage', 'sprintboard:token', conn.token);
+      try { history.replaceState(null, '', location.pathname); } catch (e) { /* file:// */ }
+    } catch (err) {
+      state.source = null;
+      state.data = null;
+      showConnect(silent ? `Couldn't reconnect: ${err.message}` : err.message, { keepFields: !silent });
+    } finally {
+      setBusy('');
+      $('connectBtn').disabled = !isServed;
+    }
+  }
+
+  async function startDemo() {
+    try {
+      await start(buildDemo(), 'PAY');
+      try { history.replaceState(null, '', location.pathname + '?demo'); } catch (e) { /* file:// */ }
+    } catch (err) {
+      showConnect('Demo data failed to load: ' + err.message);
+    }
+  }
+
+  $('connectForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const raw = $('fUrl').value.trim().replace(/\/+$/, '');
+    const conn = {
+      baseUrl: raw && !/^https?:\/\//i.test(raw) ? 'https://' + raw : raw,
+      token: $('fToken').value.trim(),
+      project: $('fProject').value.trim(),
+      email: $('fEmail').value.trim(),
+    };
+    try { if (conn.baseUrl) new URL(conn.baseUrl); } catch (err) { return setFormError('That Jira URL doesn\'t look right. Use something like https://jira.yourcompany.com.'); }
+    if (!conn.baseUrl) return setFormError('Enter your Jira URL.');
+    if (!conn.token) return setFormError('Enter your personal access token.');
+    if (!conn.project) return setFormError('Enter the project key, like PAY, or its numeric ID.');
+    setFormError('');
+    state.data = null;
+    connectLive(conn);
+  });
+  $('demoBtn').addEventListener('click', () => { state.data = null; heroAnimated = false; startDemo(); });
+  $('connectionBtn').addEventListener('click', () => {
+    closeDrawer();
+    showConnect('');
+  });
+  fill($('refreshBtn'), icon('refresh'), 'Refresh');
+  $('refreshBtn').addEventListener('click', async () => {
+    if (!state.source) return;
+    try {
+      const sprints = await state.source.listSprints(state.boardId);
+      state.sprints = sprints;
+      const id = sprints.some((sp) => sp.id === state.sprintId) ? state.sprintId : sprints[0] && sprints[0].id;
+      if (id != null) await selectSprint(id);
+    } catch (err) {
+      showBanner(`Couldn't refresh: ${err.message}`);
+    }
+  });
+  $('boardSelect').addEventListener('change', (e) => {
+    selectBoard(Number(e.target.value)).catch((err) => showBanner(`Couldn't load the board: ${err.message}`));
+  });
+  $('sprintSelect').addEventListener('change', (e) => { selectSprint(Number(e.target.value)); });
+  $('metricToggle').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-metric]');
+    if (!b || prefs.metric === b.dataset.metric) return;
+    prefs.metric = b.dataset.metric;
+    savePrefs();
+    renderMetricToggle();
+    if (state.data) renderAll();
+  });
+
+  // Re-draw the burndown when its panel changes width.
+  let resizeTimer = null;
+  new ResizeObserver(() => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => { if (state.data && !$('sprintView').hidden) renderBurndown(filteredIssues()); }, 120);
+  }).observe($('burndownPanel'));
+  new ResizeObserver(() => {
+    document.documentElement.style.setProperty('--topbar-h', $('topbar').offsetHeight + 'px');
+  }).observe($('topbar'));
+
+  // ======================================================================
+  // Start
+  // ======================================================================
+  const params = new URLSearchParams(location.search);
+  const saved = store.get('localStorage', 'sprintboard:conn', {});
+  const savedToken = store.get('sessionStorage', 'sprintboard:token', '');
+  if (params.has('demo')) {
+    startDemo();
+  } else if (isServed && saved.baseUrl && saved.project && savedToken) {
+    showScreen('note', 'Connecting to Jira…');
+    connectLive({ baseUrl: saved.baseUrl, project: saved.project, email: saved.email, token: savedToken }, { silent: true });
+  } else {
+    showConnect('');
+  }
+})();
+</script>
+</body>
+</html>
