@@ -520,6 +520,12 @@
   .fit-bar { position: relative; flex: none; width: 72px; height: 8px; border-radius: 3px; background: var(--raised); border: 1px solid var(--hair); overflow: hidden; }
   .fit-bar span { position: absolute; top: 0; bottom: 0; left: 0; }
   .plan-scroll { overflow-x: auto; }
+  .plan-table tr.plan-side td { color: var(--ink-2); }
+  .plan-table tr.plan-add td { border-bottom: 0; padding-top: 10px; }
+  .plan-add .select { padding-top: 4px; padding-bottom: 4px; font-size: 14px; }
+  .plan-add .btn { padding: 4px 10px; font-size: 14px; }
+  .icon-btn { display: inline-grid; place-items: center; width: 28px; height: 28px; border: 1px solid transparent; border-radius: 6px; background: none; color: var(--muted); cursor: pointer; }
+  .icon-btn:hover { border-color: var(--line); color: var(--ink); background: var(--card); }
 
   /* ---------- Snapshot ---------- */
   .snap-wrap { position: fixed; inset: 0; z-index: 55; display: grid; place-items: center; padding: 24px; background: rgba(10, 16, 22, .55); }
@@ -3998,8 +4004,18 @@
     for (const i of targetIssues) row(i.assignee).planned += val(i);
     const selected = isBacklog() ? state.data.issues.filter((i) => state.selected.has(i.key)) : [];
     for (const i of selected) row(i.assignee).sel += val(i);
-    const people = [...rows.values()].filter((r) => r.id !== '__none').sort((a, b) => a.name.localeCompare(b.name));
+    // The team: a list saved per board once someone edits it; until then it's
+    // worked out from recent sprints and the work already planned.
+    const teamKey = `sprintboard:team:${state.boardId}`;
+    const savedTeam = store.get('localStorage', teamKey, null);
+    const custom = Array.isArray(savedTeam);
+    if (custom) for (const m of savedTeam) row(m);
+    const memberIds = custom ? new Set(savedTeam.map((m) => m.id)) : null;
+    const byName = (a, b) => a.name.localeCompare(b.name);
+    const people = [...rows.values()].filter((r) => r.id !== '__none' && (!custom || memberIds.has(r.id))).sort(byName);
+    const outsiders = custom ? [...rows.values()].filter((r) => r.id !== '__none' && !memberIds.has(r.id) && r.planned + r.sel > 0).sort(byName) : [];
     const unassigned = rows.get('__none');
+    const saveTeam = (list) => { store.set('localStorage', teamKey, list.map((m) => ({ id: m.id, name: m.name }))); redraw(); };
     for (const r of people) {
       r.off = clamp(Number(off[r.id]) || 0, 0, days);
       r.factor = (days - r.off) / days;
@@ -4130,24 +4146,58 @@
     const head = rule
       ? ['Person', 'Days off', 'Capacity', 'Planned', 'Fit', 'Recent average']
       : ['Person', 'Usually finishes', 'Days off', 'Capacity', 'Planned', 'Fit'];
+    const cols = head.length + 1;
+    const removeBtn = (r) => h('button', { type: 'button', class: 'icon-btn', 'aria-label': `Remove ${r.name} from the team`, title: 'Remove from the team',
+      onclick: () => saveTeam(people.filter((x) => x.id !== r.id)) }, icon('close'));
+    // A row for work that doesn't count toward capacity: no days off, capacity or fit.
+    const sideRow = (avatarEl, name, r, note, action) => h('tr', { class: 'plan-side' },
+      h('td', null, h('span', { class: 'who' }, avatarEl, h('span', null, name))),
+      ...(rule ? [h('td'), h('td', { class: 'r' }, '–'), h('td', { class: 'r' }, plannedCell(r))]
+        : [h('td', { class: 'r' }, '–'), h('td'), h('td', { class: 'r' }, '–'), h('td', { class: 'r' }, plannedCell(r))]),
+      h('td', { colspan: rule ? 2 : 1 }, h('span', { class: 'muted' }, note)),
+      h('td', { class: 'r' }, action));
+
+    // Add someone: anyone who can be assigned issues in the project.
+    const addSel = h('select', { class: 'select', 'aria-label': 'Person to add to the team', disabled: true }, h('option', { value: '' }, 'Loading people…'));
+    const addBtn = h('button', { type: 'button', class: 'btn', disabled: true }, icon('plus'), 'Add');
+    let candidates = [];
+    boardMeta().then((meta) => {
+      const ids = new Set(people.map((r) => r.id));
+      candidates = meta.users.filter((u) => !ids.has(u.id)).sort(byName);
+      fill(addSel, h('option', { value: '' }, candidates.length ? 'Add a person…' : 'Everyone is on the team'),
+        candidates.map((u) => h('option', { value: u.id }, u.isMe ? `${u.name} (you)` : u.name)));
+      addSel.disabled = !candidates.length;
+    }).catch(() => { fill(addSel, h('option', { value: '' }, 'Couldn\'t load people')); });
+    addSel.addEventListener('change', () => { addBtn.disabled = !addSel.value; });
+    addBtn.addEventListener('click', () => {
+      const u = candidates.find((x) => x.id === addSel.value);
+      if (u) saveTeam([...people, { id: u.id, name: u.name }]);
+    });
+
     const right = h('div', null,
       h('div', { class: 'plan-scroll' }, h('table', { class: 'plan-table' },
-        h('thead', null, h('tr', null, head.map((t) => h('th', { class: t === 'Person' || t === 'Fit' ? null : 'r' }, t)))),
+        h('thead', null, h('tr', null, head.map((t) => h('th', { class: t === 'Person' || t === 'Fit' ? null : 'r' }, t)), h('th', null, h('span', { class: 'sr-only' }, 'Remove')))),
         h('tbody', null,
           people.map((r) => {
             const who = h('td', null, h('span', { class: 'who' }, h('span', { class: 'avatar sm' }, initials(r.name)), h('span', null, r.name)));
             const cap = h('td', { class: 'r' }, r.hasCap ? fmtNum(r1(r.cap)) : '–');
             return rule
-              ? h('tr', null, who, h('td', { class: 'r' }, offInput(r)), cap, h('td', { class: 'r' }, plannedCell(r)), h('td', null, fitCell(r)), h('td', { class: 'r muted' }, histCell(r)))
-              : h('tr', null, who, h('td', { class: 'r' }, histCell(r)), h('td', { class: 'r' }, offInput(r)), cap, h('td', { class: 'r' }, plannedCell(r)), h('td', null, fitCell(r)));
+              ? h('tr', null, who, h('td', { class: 'r' }, offInput(r)), cap, h('td', { class: 'r' }, plannedCell(r)), h('td', null, fitCell(r)), h('td', { class: 'r muted' }, histCell(r)), h('td', { class: 'r' }, removeBtn(r)))
+              : h('tr', null, who, h('td', { class: 'r' }, histCell(r)), h('td', { class: 'r' }, offInput(r)), cap, h('td', { class: 'r' }, plannedCell(r)), h('td', null, fitCell(r)), h('td', { class: 'r' }, removeBtn(r)));
           }),
-          unassigned && unassigned.planned + unassigned.sel > 0 ? h('tr', null,
-            h('td', null, h('span', { class: 'who' }, h('span', { class: 'avatar sm none' }, icon('user')), h('span', null, 'Unassigned'))),
-            ...(rule ? [h('td'), h('td', { class: 'r' }, '–'), h('td', { class: 'r' }, plannedCell(unassigned))]
-              : [h('td', { class: 'r' }, '–'), h('td'), h('td', { class: 'r' }, '–'), h('td', { class: 'r' }, plannedCell(unassigned))]),
-            h('td', { colspan: rule ? 2 : 1 }, h('span', { class: 'muted' }, 'Assign before the sprint starts'))) : null))),
+          !people.length ? h('tr', null, h('td', { colspan: cols, class: 'muted' }, 'No one is on the team yet. Add people below.')) : null,
+          outsiders.map((r) => sideRow(h('span', { class: 'avatar sm' }, initials(r.name)), r.name, r, 'Not on the team, so no capacity',
+            h('button', { type: 'button', class: 'btn', style: 'padding:3px 9px;font-size:13px', 'aria-label': `Add ${r.name} to the team`,
+              onclick: () => saveTeam([...people, { id: r.id, name: r.name }]) }, icon('plus'), 'Add'))),
+          unassigned && unassigned.planned + unassigned.sel > 0
+            ? sideRow(h('span', { class: 'avatar sm none' }, icon('user')), 'Unassigned', unassigned, 'Assign before the sprint starts', null) : null,
+          h('tr', { class: 'plan-add' }, h('td', { colspan: cols }, h('span', { class: 'move-inline' }, addSel, addBtn,
+            custom ? h('button', { type: 'button', class: 'linklike', style: 'margin-left:8px', onclick: () => { store.remove('localStorage', teamKey); redraw(); } }, 'Reset to recent sprints') : null)))))),
+      h('p', { class: 'plan-note' }, custom
+        ? 'Team list saved for this board in this browser.'
+        : 'Team list worked out from recent sprints and planned work. Add or remove someone to save it for this board.'),
       h('p', { class: 'plan-note' }, rule
-        ? `Numbers are story points. Set days off to ${days} for anyone not taking stories this sprint. Recent average is what each person finished in the last ${plural(n || 0, 'sprint', 'sprints')}. Days off are saved in this browser only.`
+        ? `Numbers are story points. Recent average is what each person finished in the last ${plural(n || 0, 'sprint', 'sprints')}. Days off are saved per sprint in this browser.`
         : `Numbers are ${isPts ? 'hours' : 'issues'}. Capacity is what each person usually finishes, reduced for days off out of ${days} working days. Days off are saved in this browser only.`));
 
     const pickTarget = isBacklog() && futures.length > 1 ? h('select', { class: 'select', 'aria-label': 'Sprint to plan',
