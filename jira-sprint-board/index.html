@@ -398,6 +398,12 @@
   .dep-node .node-summary { font-size: 14px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .depmap.focus .dep-node:not(.lit) { opacity: .3; }
   .depmap.focus .edge:not(.lit) { opacity: .12; }
+  .edge-label {
+    position: absolute; z-index: 2; transform: translate(-50%, -50%); pointer-events: none; white-space: nowrap;
+    padding: 1px 8px; border-radius: 999px; background: var(--card); border: 1px solid var(--line);
+    font-size: 11px; color: var(--ink-2); opacity: 0; transition: opacity .15s;
+  }
+  .depmap.focus .edge-label.lit { opacity: 1; }
   .links { list-style: none; padding: 0; margin: 0 0 6px; display: grid; gap: 2px; font-size: 14px; }
   .links-label { font-size: 13px; color: var(--muted); font-weight: 700; margin: 10px 0 4px; }
   .link-item { display: grid; grid-template-columns: auto auto 1fr; gap: 8px; align-items: center; padding: 5px 6px; margin: 0 -6px; border-radius: 6px; border: 0; background: none; text-align: left; width: calc(100% + 12px); color: inherit; text-decoration: none; }
@@ -1082,9 +1088,12 @@
       const o = i || outside[key];
       return { key, summary: o.summary, status: o.status, category: o.category, type: o.type, typeKind: typeKind(o.type), url: null };
     };
-    const link = (from, kind, phrase, to) => { const i = everyIssue.get(from); if (i) i.links.push({ kind, phrase, ...snapshot(to) }); };
+    const link = (from, kind, phrase, to, reverse) => { const i = everyIssue.get(from); if (i) i.links.push({ kind, phrase, reverse: reverse || phrase, ...snapshot(to) }); };
+    // Two link types, as many Jira sites have: Blocks and Dependency.
+    const usesDependsOn = new Set(['PAY-218', 'PAY-220', 'MOB-418', 'PAY-252']);
     for (const [a, list] of Object.entries(waitsOn)) {
-      for (const b of list) { link(a, 'waitsOn', 'is blocked by', b); link(b, 'blocks', 'blocks', a); }
+      const [waits, blocks] = usesDependsOn.has(a) ? ['depends on', 'is depended on by'] : ['is blocked by', 'blocks'];
+      for (const b of list) { link(a, 'waitsOn', waits, b, blocks); link(b, 'blocks', blocks, a, waits); }
     }
     for (const [a, list] of Object.entries(relatesTo)) {
       for (const b of list) { link(a, 'related', 'relates to', b); link(b, 'related', 'relates to', a); }
@@ -1153,8 +1162,8 @@
         everyIssue.set(key, issue);
         if (sprint) logEdit(key, 'added', { sprintId: sprint.id });
         if (input.cloneOf) {
-          link(key, 'cloneOf', 'clones', input.cloneOf);
-          link(input.cloneOf, 'clonedBy', 'is cloned by', key);
+          link(key, 'cloneOf', 'clones', input.cloneOf, 'is cloned by');
+          link(input.cloneOf, 'clonedBy', 'is cloned by', key, 'clones');
         }
         return { key, url: null, warnings: [] };
       },
@@ -1274,8 +1283,8 @@
   function linkKind(phrase) {
     if (/is cloned by|has clone/i.test(phrase)) return 'clonedBy';
     if (/^\s*clones\b|is a clone of|cloned from/i.test(phrase)) return 'cloneOf';
-    if (/is blocked by|blocked by|depends on|is dependent on|requires|waits on|is caused by/i.test(phrase)) return 'waitsOn';
-    if (/\bblocks\b|is depended on by|is required by|dependency (of|for)|is a prerequisite|causes/i.test(phrase)) return 'blocks';
+    if (/is blocked by|blocked by|depends on|is dependent on|requires|waits on/i.test(phrase)) return 'waitsOn';
+    if (/\bblocks\b|is depended on by|is required by|dependency (of|for)|is a prerequisite/i.test(phrase)) return 'blocks';
     return 'related';
   }
   const categoryOf = (status) => {
@@ -1444,9 +1453,11 @@
           const t = l.type || {};
           // Jira lists the other issue on the side it sits; the phrase reads from this issue.
           const phrase = (l.inwardIssue ? t.inward : t.outward) || t.name || 'relates to';
+          // The same link read from the other issue's side ("blocks" for "is blocked by").
+          const reverse = (l.inwardIssue ? t.outward : t.inward) || phrase;
           const of = other.fields || {};
           const otype = (of.issuetype && of.issuetype.name) || 'Issue';
-          return { kind: linkKind(phrase), phrase, key: other.key, summary: of.summary || other.key,
+          return { kind: linkKind(phrase), phrase, reverse, linkType: t.name || null, key: other.key, summary: of.summary || other.key,
             status: (of.status && of.status.name) || 'Unknown', category: categoryOf(of.status), type: otype, typeKind: typeKind(otype), url: browse(other.key) };
         }).filter(Boolean),
         url: browse(raw.key),
@@ -1825,6 +1836,18 @@
     const here = state.data && state.data.byKey.get(link.key);
     return here ? { ...link, summary: here.summary, status: here.status, category: here.category, typeKind: here.typeKind, issue: here } : link;
   }
+  // Links grouped by Jira's exact wording: "is blocked by PAY-1, PAY-2; depends on PAY-3".
+  const capFirst = (t) => (t ? t.charAt(0).toUpperCase() + t.slice(1) : t);
+  function byPhrase(links) {
+    const groups = new Map();
+    for (const l of links) {
+      const k = String(l.phrase).toLowerCase();
+      if (!groups.has(k)) groups.set(k, { phrase: l.phrase, links: [] });
+      groups.get(k).links.push(l);
+    }
+    return [...groups.values()];
+  }
+  const phraseText = (links, max = 2) => byPhrase(links).map((g) => `${g.phrase} ${keyList(g.links, max)}`).join('; ');
   const waitsOnOpen = (issue) => (issue.category === 'done' ? [] :
     issue.links.filter((l) => l.kind === 'waitsOn').map(resolveLink).filter((l) => l.category !== 'done'));
   const keyList = (links, max = 2) => links.slice(0, max).map((l) => l.key).join(', ') + (links.length > max ? ` +${links.length - max}` : '');
@@ -1836,7 +1859,7 @@
     const out = [];
     if (isBlocked(issue)) out.push({ rank: 5, icon: 'flag', tone: 'critical', text: issue.flagged ? 'Flagged as blocked' : `Status is ${issue.status}` });
     const waits = waitsOnOpen(issue);
-    if (waits.length) out.push({ rank: 4.5, icon: 'dep', tone: 'critical', text: `Waits on ${keyList(waits)}` });
+    if (waits.length) out.push({ rank: 4.5, icon: 'dep', tone: 'critical', text: capFirst(phraseText(waits)) });
     if (issue.category === 'progress' && issue.statusChanged && sprint.state === 'active') {
       const days = Math.floor((now - issue.statusChanged) / DAY_MS);
       if (days >= 4) out.push({ rank: 4, icon: 'clock', tone: 'serious', text: `In progress for ${days} days` });
@@ -2425,17 +2448,15 @@
     const open = waits.filter((l) => l.category !== 'done');
     const blocks = issue.links.filter((l) => l.kind === 'blocks').map(resolveLink).filter((l) => l.category !== 'done');
     const describe = (list) => list.map((l) => `${l.key} (${l.status})`).join(', ');
+    const lines = (list, iconName, tone) => byPhrase(list).map((g) => h('span', { class: 'dep-line', title: `${capFirst(g.phrase)} ${describe(g.links)}` },
+      icon(iconName, tone), h('span', null, `${capFirst(g.phrase)} `, h('strong', null, keyList(g.links)))));
     return [
-      open.length ? h('span', { class: 'dep-line', title: `Waits on ${describe(open)}` }, icon('dep', 'tone-critical'),
-        h('span', null, 'Waits on ', h('strong', null, keyList(open)))) : null,
-      !open.length && waits.length ? h('span', { class: 'dep-line', title: `Finished: ${describe(waits)}` }, icon('check', 'tone-good'),
+      lines(open, 'dep', 'tone-critical'),
+      !open.length && waits.length ? h('span', { class: 'dep-line', title: `Finished: ${capFirst(phraseText(waits, 9))}` }, icon('check', 'tone-good'),
         h('span', null, waits.length === 1 ? 'Dependency finished' : 'Dependencies finished')) : null,
-      blocks.length ? h('span', { class: 'dep-line', title: `${describe(blocks)} wait on this` }, icon('dep', 'tone-muted'),
-        h('span', null, 'Blocks ', h('strong', null, keyList(blocks)))) : null,
-      cloneOf.length ? h('span', { class: 'dep-line', title: `Cloned from ${describe(cloneOf)}` }, icon('copy', 'tone-muted'),
-        h('span', null, 'Clone of ', h('strong', null, keyList(cloneOf)))) : null,
-      clones.length ? h('span', { class: 'dep-line', title: `Clones: ${describe(clones)}` }, icon('copy', 'tone-muted'),
-        h('span', null, 'Cloned to ', h('strong', null, keyList(clones)))) : null,
+      lines(blocks, 'dep', 'tone-muted'),
+      lines(cloneOf, 'copy', 'tone-muted'),
+      lines(clones, 'copy', 'tone-muted'),
     ];
   }
 
@@ -2503,7 +2524,7 @@
   // Dependencies: a left-to-right map. Each arrow runs from the work that has
   // to finish first to the work that waits on it.
   // ======================================================================
-  const NODE = { w: 236, h: 84, gx: 64, gy: 14, gap: 36 };
+  const NODE = { w: 236, h: 84, gx: 96, gy: 14, gap: 36 };
 
   function dependencyGraph(issues) {
     const nodes = new Map();
@@ -2523,7 +2544,9 @@
         const id = `${kind}:${from}>${to}`;
         if (from === to || edges.has(id)) continue;
         node(i.key); node(l.key, l);
-        edges.set(id, { id, from, to, kind });
+        // fromSays: read from the arrow's start ("PAY-1 blocks PAY-2"); toSays: from its end.
+        const iIsTo = l.kind === 'waitsOn' || l.kind === 'cloneOf';
+        edges.set(id, { id, from, to, kind, fromSays: iIsTo ? l.reverse || l.phrase : l.phrase, toSays: iIsTo ? l.phrase : l.reverse || l.phrase });
       }
     }
     const info = (n) => n.issue || n.link;
@@ -2637,14 +2660,9 @@
     const L = layoutGraph(g);
     // Waiting/blocking only counts dependency links; clones are listed separately.
     const depPreds = new Map([...g.nodes.keys()].map((k) => [k, []]));
-    const depSuccs = new Map([...g.nodes.keys()].map((k) => [k, []]));
-    const mainOf = new Map([...g.nodes.keys()].map((k) => [k, []]));
-    const clonesOf = new Map([...g.nodes.keys()].map((k) => [k, []]));
-    for (const e of g.edges) {
-      if (e.kind === 'dep') { depPreds.get(e.to).push(e.from); depSuccs.get(e.from).push(e.to); }
-      else { mainOf.get(e.to).push(e.from); clonesOf.get(e.from).push(e.to); }
-    }
+    for (const e of g.edges) if (e.kind === 'dep') depPreds.get(e.to).push(e.from);
     const cloneEdges = g.edges.filter((e) => e.kind === 'clone').length;
+    const kindsShown = [...new Set(g.edges.map((e) => e.fromSays.toLowerCase()))];
     const waiting = issues.filter((i) => waitsOnOpen(i).length);
     const outside = [...g.nodes.values()].filter((n) => n.external);
     let longest = 0;
@@ -2669,8 +2687,8 @@
     const legend = h('div', { class: 'legend' },
       h('span', { class: 'key' }, lineKey('var(--critical)'), 'Still blocking'),
       h('span', { class: 'key' }, h('span', { class: 'line-key', style: 'background:repeating-linear-gradient(90deg,var(--muted) 0 4px,transparent 4px 7px)' }), 'Finished'),
-      cloneEdges ? h('span', { class: 'key' }, h('span', { class: 'line-key', style: 'background:repeating-linear-gradient(90deg,var(--ink-2) 0 2px,transparent 2px 5px)' }), 'Clone of (not blocking)') : null,
-      h('span', { class: 'muted' }, 'Arrows point from the work that must finish first, or from the main story to its clones. Hover an issue to trace its chain.'));
+      cloneEdges ? h('span', { class: 'key' }, h('span', { class: 'line-key', style: 'background:repeating-linear-gradient(90deg,var(--ink-2) 0 2px,transparent 2px 5px)' }), 'Clones (not blocking)') : null,
+      h('span', { class: 'muted' }, `Jira links on this map: ${kindsShown.join(', ')}. Arrows point from the work that must finish first, or from the main story to its clones. Hover an issue to see each link.`));
 
     const map = h('div', { class: 'depmap', style: `width:${L.width}px;height:${L.height}px` });
     const svg = s('svg', { class: 'edges', width: L.width, height: L.height, 'aria-hidden': 'true' },
@@ -2678,6 +2696,7 @@
         s('marker', { id: 'arrow-' + id, viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: 'auto-start-reverse' },
           s('path', { d: 'M0 0L10 5L0 10z', fill: color })))));
     const edgeEls = new Map();
+    const labelEls = new Map();
     for (const e of g.edges) {
       const pts = L.routes.get(e.id);
       let d = `M${pts[0][0]} ${pts[0][1]}`;
@@ -2696,6 +2715,11 @@
       });
       edgeEls.set(e.id, path);
       svg.append(path);
+      // The exact relation, shown on the arrow while its chain is highlighted.
+      const mid = Math.floor((pts.length - 1) / 2);
+      const [mx1, my1] = pts[mid], [mx2, my2] = pts[mid + 1];
+      const lx = (mx1 + mx2) / 2, ly = (my1 + my2) / 2;
+      labelEls.set(e.id, h('span', { class: 'edge-label', style: `left:${lx}px;top:${ly}px`, 'aria-hidden': 'true' }, e.fromSays));
     }
     map.append(svg);
 
@@ -2706,7 +2730,11 @@
       const set = new Set([k, ...reach(k, L.preds, new Set()), ...reach(k, L.succs, new Set())]);
       map.classList.add('focus');
       nodeEls.forEach((el, key) => el.classList.toggle('lit', set.has(key)));
-      for (const e of g.edges) edgeEls.get(e.id).classList.toggle('lit', set.has(e.from) && set.has(e.to));
+      for (const e of g.edges) {
+        const on = set.has(e.from) && set.has(e.to);
+        edgeEls.get(e.id).classList.toggle('lit', on);
+        labelEls.get(e.id).classList.toggle('lit', on);
+      }
     };
     const unlight = () => map.classList.remove('focus');
 
@@ -2714,11 +2742,9 @@
       const p = L.pos.get(key);
       const it = g.info(n);
       const waitingHere = n.issue && waitsOnOpen(n.issue).length;
-      const label = `${key}: ${it.summary}. ${it.status}.` + (n.external ? ' Not in this sprint.' : '') +
-        (depPreds.get(key).length ? ` Waits on ${depPreds.get(key).join(', ')}.` : '') +
-        (depSuccs.get(key).length ? ` Blocks ${depSuccs.get(key).join(', ')}.` : '') +
-        (mainOf.get(key).length ? ` Clone of ${mainOf.get(key).join(', ')}.` : '') +
-        (clonesOf.get(key).length ? ` Cloned to ${clonesOf.get(key).join(', ')}.` : '');
+      const says = [...g.edges.filter((e) => e.to === key).map((e) => `${capFirst(e.toSays)} ${e.from}.`),
+        ...g.edges.filter((e) => e.from === key).map((e) => `${capFirst(e.fromSays)} ${e.to}.`)];
+      const label = `${key}: ${it.summary}. ${it.status}.` + (n.external ? ' Not in this sprint.' : '') + (says.length ? ' ' + says.join(' ') : '');
       const props = {
         class: 'dep-node' + (n.external ? ' external' : '') + (waitingHere ? ' waiting' : ''),
         style: `left:${p.x}px;top:${p.y}px`, 'aria-label': label, title: n.external ? 'Not in this sprint' : null,
@@ -2738,6 +2764,8 @@
       nodeEls.set(key, el);
       map.append(el);
     }
+    // Labels go above the cards so they stay readable while a chain is highlighted.
+    labelEls.forEach((el) => map.append(el));
 
     const rows = g.edges.map((e) => ({ e, from: g.info(g.nodes.get(e.from)), to: g.info(g.nodes.get(e.to)) }))
       .sort((a, b) => (a.e.kind === 'clone') - (b.e.kind === 'clone') || b.e.open - a.e.open || a.e.to.localeCompare(b.e.to));
@@ -2747,7 +2775,7 @@
         h('thead', null, h('tr', null, h('th', null, 'Issue'), h('th', null, 'Link'), h('th', null, 'Other issue'), h('th', null, 'Its status'), h('th', null, 'Blocking now'))),
         h('tbody', null, rows.map(({ e, from, to }) => h('tr', null,
           h('td', null, `${e.to}  ${to.summary}`),
-          h('td', null, e.kind === 'clone' ? 'Clone of' : 'Waits on'),
+          h('td', null, e.toSays),
           h('td', null, `${e.from}  ${from.summary}` + (g.nodes.get(e.from).external ? ' (outside sprint)' : '')),
           h('td', null, from.status),
           h('td', null, e.open ? 'Yes' : 'No'))))));
@@ -3088,13 +3116,9 @@
 
   function linkSections(issue) {
     if (!issue.links.length) return null;
-    const groups = [
-      ['Waits on', issue.links.filter((l) => l.kind === 'waitsOn')],
-      ['Blocks', issue.links.filter((l) => l.kind === 'blocks')],
-      ['Clone of', issue.links.filter((l) => l.kind === 'cloneOf')],
-      ['Cloned to', issue.links.filter((l) => l.kind === 'clonedBy')],
-      ['Other links', issue.links.filter((l) => l.kind === 'related')],
-    ].filter(([, list]) => list.length);
+    // One group per exact Jira relation, ordered: waiting, blocking, clones, other.
+    const groups = ['waitsOn', 'blocks', 'cloneOf', 'clonedBy', 'related']
+      .flatMap((kind) => byPhrase(issue.links.filter((l) => l.kind === kind)).map((g) => [capFirst(g.phrase), g.links, kind]));
     const item = (raw, showPhrase) => {
       const l = resolveLink(raw);
       const kids = [
@@ -3108,10 +3132,10 @@
     };
     return [
       h('h3', null, 'Dependencies'),
-      groups.map(([label, list]) => [
-        h('div', { class: 'links-label' }, label === 'Waits on' && list.some((l) => resolveLink(l).category !== 'done') && issue.category !== 'done'
+      groups.map(([label, list, kind]) => [
+        h('div', { class: 'links-label' }, kind === 'waitsOn' && list.some((l) => resolveLink(l).category !== 'done') && issue.category !== 'done'
           ? `${label}: ${list.filter((l) => resolveLink(l).category !== 'done').length} not finished` : label),
-        h('ul', { class: 'links' }, list.map((l) => item(l, label === 'Other links'))),
+        h('ul', { class: 'links' }, list.map((l) => item(l, false))),
       ]),
     ];
   }
@@ -3811,7 +3835,7 @@
       const waits = waitsOnOpen(i);
       if (i.category !== 'done' && (isBlocked(i) || waits.length)) {
         const isNew = evs.some((e) => e.kind === 'flagged' || e.kind === 'blockedBy');
-        p.blocked.push({ issue: i, isNew, why: [isBlocked(i) ? (i.flagged ? 'Flagged as blocked' : `Status is ${i.status}`) : null, waits.length ? `Waits on ${keyList(waits)}` : null].filter(Boolean).join(', ') });
+        p.blocked.push({ issue: i, isNew, why: [isBlocked(i) ? (i.flagged ? 'Flagged as blocked' : `Status is ${i.status}`) : null, waits.length ? capFirst(phraseText(waits)) : null].filter(Boolean).join(', ') });
         if (isNew) totals.newlyBlocked += 1;
       }
       if (i.category === 'progress') {
@@ -4670,7 +4694,7 @@
             h('tbody', null, rows.map((i) => {
               const tr = h('tr', { tabindex: 0, 'aria-label': `${i.key}: ${i.summary}` },
                 h('td', null, h('span', { class: 'status-chip' }, h('span', { style: `color:var(--type-${i.typeKind})`, title: i.type }, icon(i.typeKind)), i.key)),
-                h('td', { class: 'summary' }, i.summary, waitsOnOpen(i).length ? h('span', { class: 'dep-line' }, icon('dep', 'tone-critical'), h('span', null, 'Waits on ', h('strong', null, keyList(waitsOnOpen(i))))) : null),
+                h('td', { class: 'summary' }, i.summary, waitsOnOpen(i).length ? h('span', { class: 'dep-line' }, icon('dep', 'tone-critical'), h('span', null, capFirst(phraseText(waitsOnOpen(i))))) : null),
                 h('td', null, h('span', { class: 'status-chip' }, swatch(`var(--st-${i.category})`), i.status)),
                 h('td', null, i.sprint ? h('span', { class: 'sprint-tag' }, i.sprint.name, i.sprint.state === 'future' ? h('span', { class: 'muted' }, '(upcoming)') : null) : h('span', { class: 'muted' }, 'Backlog')),
                 h('td', null, h('span', { class: 'status-chip' }, priorityIcon(i), i.priority)),
